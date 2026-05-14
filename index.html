@@ -1,1 +1,155 @@
-Hola mundo
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casa Nei | Medicina Tradicional China y Artes Marciales</title>
+    <meta name="description" content="Casa Nei es un espacio de medicina tradicional china, acupuntura, masajes, kung fu, tai chi chuan y conocimiento taoísta.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="#inicio" class="logo">
+            <img src="logo.jpg" alt="Casa Nei Logo" style="height: 60px; border-radius: 12px;">
+            <span style="display: none;">Casa Nei</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#inicio">Inicio</a></li>
+            <li><a href="#servicios">Servicios</a></li>
+            <li><a href="#cursos">Cursos</a></li>
+            <li><a href="#quien-soy">Quién soy</a></li>
+            <li><a href="#contacto">Contacto</a></li>
+        </ul>
+        <a href="#agenda" class="btn-primary">Agenda una cita</a>
+    </nav>
+
+    <!-- Hero Section (Inicio) -->
+    <section id="inicio" class="hero">
+        <div class="hero-content">
+            <h1>Encuentra tu equilibrio natural</h1>
+            <p>Descubre el camino hacia el bienestar físico y mental a través de la Medicina Tradicional China, la meditación y las artes marciales milenarias.</p>
+            <div class="hero-actions">
+                <a href="#servicios" class="btn-secondary">Explorar Servicios</a>
+                <a href="#agenda" class="btn-primary">Agendar Cita</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Servicios Section -->
+    <section id="servicios">
+        <h2 class="section-title">Nuestros Servicios</h2>
+        <div class="grid-container">
+            <div class="card">
+                <i class="fas fa-spa card-icon"></i>
+                <h3>Masajes</h3>
+                <p>Terapias manuales para liberar tensión, mejorar la circulación y restaurar la energía vital del cuerpo utilizando técnicas tradicionales.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-yin-yang card-icon"></i>
+                <h3>Acupuntura</h3>
+                <p>Armoniza tu flujo de energía (Qi) mediante la estimulación de puntos específicos del cuerpo para tratar diversas afecciones.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-fire card-icon"></i>
+                <h3>Moxibustión</h3>
+                <p>Terapia térmica que consiste en aplicar calor estimulante en los puntos de acupuntura para promover la curación y relajar.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-glass-water card-icon"></i>
+                <h3>Campanas (Ventosas)</h3>
+                <p>Terapia de succión que mejora la circulación sanguínea, alivia dolores musculares y promueve la relajación profunda.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cursos y Disciplinas Section -->
+    <section id="cursos" class="courses-bg">
+        <h2 class="section-title">Cursos y Disciplinas</h2>
+        <div class="grid-container">
+            <div class="card">
+                <i class="fas fa-fist-raised card-icon"></i>
+                <h3>Kung Fu</h3>
+                <p>Desarrolla fuerza, flexibilidad y disciplina mental a través del arte marcial tradicional chino.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-child card-icon"></i>
+                <h3>Tai Chi Chuan</h3>
+                <p>Meditación en movimiento. Mejora tu equilibrio, reduce el estrés y fortalece tu salud integral.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-om card-icon"></i>
+                <h3>Meditación y Filosofía</h3>
+                <p>Encuentra la paz interior a través de prácticas meditativas y el estudio de la filosofía taoísta.</p>
+            </div>
+            <div class="card">
+                <i class="fas fa-door-open card-icon"></i>
+                <h3>Espacio Abierto</h3>
+                <p>Un lugar dedicado al conocimiento. Ofrecemos talleres, conferencias y cursos de diversas disciplinas complementarias.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quién Soy Section -->
+    <section id="quien-soy">
+        <h2 class="section-title">Quién Soy</h2>
+        <div class="about-grid">
+            <div class="about-img-container">
+                <!-- Placeholder for portrait -->
+                <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2120&auto=format&fit=crop" alt="Terapeuta" class="about-img">
+            </div>
+            <div class="about-text">
+                <h3>Integrando la mente, el cuerpo y la energía</h3>
+                <p>Mi pasión por la sanación me ha llevado a recorrer un camino de aprendizaje continuo. Cuento con estudios formales en <strong>Medicina y Artes Marciales Chinas</strong>, lo que me permite comprender el cuerpo desde una perspectiva holística y energética.</p>
+                <p>Además, mi formación como <strong>Licenciado en Psicología</strong> me brinda las herramientas para abordar el bienestar mental y emocional, ofreciendo un acompañamiento integral a mis pacientes y alumnos.</p>
+                <p>En Casa Nei, fusionamos el conocimiento milenario con el entendimiento moderno de la mente para ayudarte a alcanzar tu máximo potencial.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agenda (Call to Action) -->
+    <section id="agenda" style="background-color: var(--bg-color); text-align: center;">
+        <h2 class="section-title">Comienza tu viaje</h2>
+        <p style="color: var(--text-muted); font-size: 1.2rem; max-width: 600px; margin: 0 auto 2rem;">Estamos listos para recibirte. Agenda tu cita de valoración o solicita información sobre nuestras clases y talleres.</p>
+        <a href="https://wa.me/1234567890" target="_blank" class="btn-primary" style="display: inline-block; padding: 1rem 2rem; font-size: 1.1rem;">
+            <i class="fab fa-whatsapp"></i> Agendar por WhatsApp
+        </a>
+    </section>
+
+    <!-- Footer / Contacto -->
+    <footer id="contacto" class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <a href="#inicio" class="logo" style="color: white; margin-bottom: 1rem; display: block;">Casa Nei</a>
+                <p>Un espacio abierto al conocimiento, la salud integral y la filosofía taoísta.</p>
+                <div class="social-links">
+                    <a href="#" class="social-icon" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-icon" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-icon" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4>Contacto</h4>
+                <p><i class="fas fa-map-marker-alt" style="width: 20px;"></i> Dirección de Casa Nei</p>
+                <p><i class="fas fa-phone" style="width: 20px;"></i> +52 (123) 456-7890</p>
+                <p><i class="fas fa-envelope" style="width: 20px;"></i> contacto@casanei.com</p>
+            </div>
+            <div class="footer-section">
+                <h4>Horarios</h4>
+                <p>Lunes - Viernes: 9:00 AM - 8:00 PM</p>
+                <p>Sábados: 9:00 AM - 2:00 PM</p>
+                <p>Domingos: Cerrado</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Casa Nei. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
