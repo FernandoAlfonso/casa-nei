@@ -1,0 +1,39 @@
+name: 🚀 Desplegar Proyecto Fisio Athletic a HostGator
+
+on:
+  push:
+    branches:
+      - main # El despliegue se activará automáticamente cuando hagas push a la rama 'main'
+
+jobs:
+  deploy:
+    name: 🎉 Desplegando en Servidor Compartido
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚚 Descargando el código del repositorio
+      uses: actions/checkout@v4
+
+    # -------------------------------------------------------------
+    # PASO A: DESPLEGAR LA LÓGICA PROTEGIDA (Capa de Dominio/Core)
+    # -------------------------------------------------------------
+    - name: 🔒 Subiendo Código Core a (.apps)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER_OLA_VERDE }}       # <-- Tu IP Shared
+        username: ${{ secrets.FTP_USERNAME_OLA_VERDE }}   # <-- Tu Usuario FTP
+        password: ${{ secrets.FTP_PASSWORD_OLA_VERDE }}   # <-- Tu Contraseña FTP
+        local-dir: ./src/                                 # <-- Carpeta local de tu lógica
+        server-dir: .apps/fisio-athletic/                 # <-- Destino seguro en HostGator
+
+    # -------------------------------------------------------------
+    # PASO B: DESPLEGAR ARCHIVOS PÚBLICOS (Capa de Infraestructura/Entrega)
+    # -------------------------------------------------------------
+    - name: 🌐 Subiendo Entradas y Assets a (public_html)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER_OLA_VERDE }}
+        username: ${{ secrets.FTP_USERNAME_OLA_VERDE }}
+        password: ${{ secrets.FTP_PASSWORD_OLA_VERDE }}
+        local-dir: ./public/                              # <-- Carpeta local de tus assets públicos
+        server-dir: ./public_html/fisio-athletic/          # <-- Raíz pública en HostGator
