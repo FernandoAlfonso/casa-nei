@@ -1,4 +1,4 @@
-name: 🚀 Desplegar Proyecto Fisio Athletic a HostGator
+name: 🚀 Desplegar Proyecto Casa nei a HostGator
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME_OLA_VERDE }}   # <-- Tu Usuario FTP
         password: ${{ secrets.FTP_PASSWORD_OLA_VERDE }}   # <-- Tu Contraseña FTP
         local-dir: ./src/                                 # <-- Carpeta local de tu lógica
-        server-dir: .apps/fisio-athletic/                 # <-- Destino seguro en HostGator
+        server-dir: .apps/casa-nei/                 # <-- Destino seguro en HostGator
 
     # -------------------------------------------------------------
     # PASO B: DESPLEGAR ARCHIVOS PÚBLICOS (Capa de Infraestructura/Entrega)
@@ -36,4 +36,4 @@ jobs:
         username: ${{ secrets.FTP_USERNAME_OLA_VERDE }}
         password: ${{ secrets.FTP_PASSWORD_OLA_VERDE }}
         local-dir: ./public/                              # <-- Carpeta local de tus assets públicos
-        server-dir: ./public_html/fisio-athletic/          # <-- Raíz pública en HostGator
+        server-dir: ./public_html/casa-nei/          # <-- Raíz pública en HostGator
