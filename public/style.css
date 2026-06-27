@@ -320,6 +320,42 @@ section {
   font-size: 0.9rem;
 }
 
+/* Purpose Section */
+.about-purpose {
+  background-color: #f5efe9; /* Soft premium warm linen background */
+}
+
+.about-purpose .card {
+  border: 1px solid rgba(85, 123, 95, 0.08);
+}
+
+.about-purpose .card-icon-wrapper {
+  background-color: rgba(199, 142, 94, 0.1);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  transition: var(--transition);
+}
+
+.about-purpose .card:hover .card-icon-wrapper {
+  background-color: var(--accent-color);
+}
+
+.about-purpose .card:hover .card-icon {
+  color: white;
+}
+
+.about-purpose .card-icon {
+  margin-bottom: 0;
+  font-size: 1.8rem;
+  color: var(--accent-color);
+  transition: var(--transition);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .nav-links {
