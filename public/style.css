@@ -256,8 +256,9 @@ section {
 
 .about-img {
   width: 100%;
-  height: 500px;
-  object-fit: cover;
+  height: auto;
+  max-height: 600px;
+  object-fit: contain;
   border-radius: 16px;
   box-shadow: var(--shadow-md);
 }
@@ -372,7 +373,8 @@ section {
   }
 
   .about-img {
-    height: 300px;
+    height: auto;
+    max-height: 450px;
     order: -1;
   }
 }
