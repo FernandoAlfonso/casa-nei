@@ -1,3 +1,6 @@
 # Local Netlify folder
 .netlify
 node_modules/
+skills/
+src/config.php
+src/db/schema.sql
