@@ -1,8 +1,24 @@
 {
-	"folders": [
-		{
-			"path": ".."
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "path": ".."
+    }
+  ],
+  "settings": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true, // Formatea automáticamente al guardar
+    "files.trimTrailingWhitespace": true, // Elimina espacios innecesarios al final de cada línea
+    "files.insertFinalNewline": true, // Añade una línea vacía al final del archivo
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit" // Corrección automática de linter al guardar
+    },
+    "editor.wordWrap": "on", // Ajusta el texto largo a la pantalla sin scroll horizontal
+    "editor.cursorBlinking": "smooth", // Animación suave del cursor
+    "editor.minimap.enabled": false, // Oculta el mapa de código lateral para ganar espacio
+    "editor.bracketPairColorization.enabled": true, // Colorea los pares de llaves/paréntesis para no perderse
+    "editor.guides.bracketPairs": true, // Muestra líneas para conectar llaves maestras
+    "files.autoSave": "onFocusChange"
+  }
 }
