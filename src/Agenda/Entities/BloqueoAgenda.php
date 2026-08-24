@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entities;
+namespace App\Agenda\Entities;
 
 /**
  * BloqueoAgenda - Entidad para registrar bloqueos de fechas/horas (vacaciones, festivos, descansos).

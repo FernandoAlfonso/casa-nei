@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Entities;
+namespace App\Agenda\Entities;
 
 /**
- * Cliente - Entidad pura que representa a un cliente/paciente del sistema.
+ * Cliente - Entidad pura que representa a un cliente/paciente del sistema de agenda.
  */
 class Cliente
 {
@@ -85,7 +85,7 @@ class Cliente
   }
 
   /**
-   * Instancia la entidad desde un arreglo asociativo (ej. retornado por la BD).
+   * Instancia la entidad desde un arreglo asociativo.
    */
   public static function fromArray(array $data): self
   {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entities;
+namespace App\Agenda\Entities;
 
 /**
  * EstadoCita - Enumeración de estados para el ciclo de vida de una cita.

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Db;
+namespace App\Shared\Db;
 
 use PDO;
 use PDOStatement;
@@ -64,7 +64,7 @@ class DataBase
     {
         // Verificar si las constantes globales de config.php están cargadas
         if (!defined('DB_HOST')) {
-            $configPath = dirname(__DIR__) . '/config.php';
+            $configPath = dirname(__DIR__, 2) . '/config.php';
             if (file_exists($configPath)) {
                 require_once $configPath;
             }

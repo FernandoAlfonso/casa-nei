@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entities;
+namespace App\Agenda\Entities;
 
 /**
  * HorarioAtencion - Entidad para las reglas de horarios semanales del centro.

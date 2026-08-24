@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entities;
+namespace App\Agenda\Entities;
 
 /**
  * Cita - Entidad que modela una cita o solicitud de agenda.

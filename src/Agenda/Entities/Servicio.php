@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entities;
+namespace App\Agenda\Entities;
 
 /**
  * Servicio - Entidad que representa los servicios/tratamientos ofrecidos.

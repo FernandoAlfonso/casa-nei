@@ -3,4 +3,4 @@
 node_modules/
 skills/
 src/config.php
-src/db/schema.sql
+src/Shared/db/schema.sql
