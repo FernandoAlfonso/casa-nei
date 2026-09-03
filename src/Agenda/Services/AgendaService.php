@@ -31,7 +31,7 @@ class AgendaService
     } elseif (defined('ADMIN_WHATSAPP')) {
       $this->adminWhatsapp = (string) ADMIN_WHATSAPP;
     } else {
-      $this->adminWhatsapp = '5210000000000'; // Default configurable
+      $this->adminWhatsapp = '523121064455'; // Default configurable
     }
   }
 
