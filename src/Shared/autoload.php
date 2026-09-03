@@ -19,9 +19,3 @@ spl_autoload_register(function (string $class) {
     require_once $file;
   }
 });
-
-// Cargar configuración global si existe
-$configPath = dirname(__DIR__) . '/config.php';
-if (file_exists($configPath)) {
-  require_once $configPath;
-}
