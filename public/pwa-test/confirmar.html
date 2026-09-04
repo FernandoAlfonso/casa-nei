@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Casa Nei - Confirmar Cita</title>
+  
+  <link rel="manifest" href="/pwa-test/manifest.json">
+  <meta name="theme-color" content="#1b3819">
+  <link rel="apple-touch-icon" href="/pwa-test/icons/icon-192.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #0a140d;
+      --bg-card: rgba(23, 43, 28, 0.85);
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-glow: rgba(16, 185, 129, 0.3);
+      --accent: #fbbf24;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: rgba(52, 211, 153, 0.22);
+      --danger: #ef4444;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #173820 0%, var(--bg-main) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .badge-incoming {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      align-self: center;
+      animation: bounceBadge 2s infinite ease-in-out;
+    }
+
+    @keyframes bounceBadge {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .header {
+      text-align: center;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .detail-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .detail-val {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: right;
+      color: #ffffff;
+    }
+
+    .detail-highlight {
+      color: var(--primary);
+      font-size: 1.05rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-confirm {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #042413;
+      box-shadow: 0 6px 26px var(--primary-glow);
+    }
+
+    .btn-cancel {
+      background: rgba(239, 68, 68, 0.12);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      font-size: 0.92rem;
+      padding: 12px;
+    }
+
+    .btn-back {
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 10px;
+      text-decoration: none;
+      text-align: center;
+      display: block;
+    }
+
+    .one-tap-callout {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px dashed rgba(16, 185, 129, 0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      color: #a7f3d0;
+      text-align: center;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="badge-incoming">
+      <span>🔔</span> Solicitud Entrante desde Web Push
+    </div>
+
+    <header class="header">
+      <h1>Confirmar Cita</h1>
+      <p class="subtitle">Datos preparados listos para confirmar en 1 toque</p>
+    </header>
+
+    <div class="card">
+      <div class="detail-row">
+        <span class="detail-label">👤 Paciente</span>
+        <span id="txtPaciente" class="detail-val">María López</span>
+      </div>
+
+      <div class="detail-row">
+        <span class="detail-label">📞 Teléfono</span>
+        <span class="detail-val">+52 312 123 4567</span>
+      </div>
+
+      <div class="detail-row">
+        <span class="detail-label">🌿 Servicio</span>
+        <span class="detail-val detail-highlight">Acupuntura Tradicional</span>
+      </div>
+
+      <div class="detail-row">
+        <span class="detail-label">📅 Horario</span>
+        <span class="detail-val">Hoy a las 17:00 hrs</span>
+      </div>
+
+      <div class="detail-row">
+        <span class="detail-label">📝 Notas</span>
+        <span class="detail-val" style="color: #d1d5db; font-weight: 400; font-size: 0.88rem;">Dolor lumbar, primera consulta.</span>
+      </div>
+
+      <div class="one-tap-callout">
+        ⚡ <strong>Flujo ultrarrápido:</strong> Al presionar el botón confirmas la cita con un solo movimiento, sin pasos intermedios ni formularios extra.
+      </div>
+
+      <button id="btnConfirmar" class="btn btn-confirm">
+        <span>✅</span>
+        <span id="btnConfirmarText">Confirmar Cita Ahora (1 Toque)</span>
+      </button>
+
+      <button id="btnRechazar" class="btn btn-cancel">
+        <span>❌</span>
+        <span>Rechazar / Cancelar Cita</span>
+      </button>
+    </div>
+
+    <a href="/pwa-test/" class="btn-back">⬅ Volver al Panel de Prueba</a>
+  </div>
+
+  <script>
+    // Recuperar parámetros de URL si existen
+    const params = new URLSearchParams(window.location.search);
+    const paciente = params.get('paciente') || 'María López';
+    const citaId = params.get('cita_id') || 101;
+    document.getElementById('txtPaciente').textContent = paciente;
+
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const btnConfirmarText = document.getElementById('btnConfirmarText');
+    const btnRechazar = document.getElementById('btnRechazar');
+
+    // Botón Confirmar Cita (1 Toque)
+    btnConfirmar.addEventListener('click', async () => {
+      btnConfirmar.disabled = true;
+      btnConfirmarText.textContent = 'Confirmando en el servidor...';
+
+      try {
+        const res = await fetch('/api/pwa/confirmar-cita', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cita_id: citaId, paciente: paciente })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          // Redirigir a la vista de cita confirmada
+          window.location.href = `/pwa-test/confirmada.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`;
+        } else {
+          alert('Error: ' + (data.error || 'No se pudo confirmar'));
+          btnConfirmar.disabled = false;
+          btnConfirmarText.textContent = 'Confirmar Cita Ahora (1 Toque)';
+        }
+      } catch (err) {
+        alert('Error de conexión: ' + err.message);
+        btnConfirmar.disabled = false;
+        btnConfirmarText.textContent = 'Confirmar Cita Ahora (1 Toque)';
+      }
+    });
+
+    // Botón Rechazar
+    btnRechazar.addEventListener('click', () => {
+      if (confirm(`¿Seguro que deseas rechazar la solicitud de ${paciente}?`)) {
+        alert('Solicitud rechazada.');
+        window.location.href = '/pwa-test/';
+      }
+    });
+  </script>
+</body>
+</html>

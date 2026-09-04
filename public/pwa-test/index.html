@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Casa Nei - Prueba PWA & Web Push</title>
+  
+  <!-- Configuración PWA e Iconos -->
+  <link rel="manifest" href="/pwa-test/manifest.json">
+  <meta name="theme-color" content="#1b3819">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Casa Nei">
+  <link rel="apple-touch-icon" href="/pwa-test/icons/icon-192.png">
+  
+  <!-- Tipografía Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #0a140d;
+      --bg-card: rgba(23, 43, 28, 0.75);
+      --bg-card-hover: rgba(30, 56, 36, 0.85);
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-glow: rgba(16, 185, 129, 0.25);
+      --accent: #fbbf24;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: rgba(52, 211, 153, 0.18);
+      --danger: #ef4444;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #173820 0%, var(--bg-main) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding-top: 10px;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    .brand-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #ffffff 40%, #a7f3d0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.12rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Status Grid */
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .status-item {
+      background: rgba(10, 20, 13, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-label {
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .status-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-badge {
+      grid-column: span 2;
+    }
+
+    /* Actions */
+    .btn {
+      width: 100%;
+      padding: 15px 20px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #042413;
+      box-shadow: 0 4px 20px var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #1f1202;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Countdown Circle */
+    .countdown-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 20px 0 10px;
+    }
+
+    .countdown-circle {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      border: 4px solid rgba(16, 185, 129, 0.2);
+      border-top-color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--primary);
+      animation: spinBorder 1s linear infinite;
+    }
+
+    .countdown-number {
+      animation: pulseNumber 1s ease-in-out infinite;
+    }
+
+    @keyframes spinBorder {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulseNumber {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    .countdown-tip {
+      font-size: 0.88rem;
+      color: var(--accent);
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    /* Instructions Box */
+    .info-box {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      border-left: 3px solid var(--primary);
+    }
+
+    /* Console logs */
+    .console-box {
+      background: #050a06;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.76rem;
+      color: #a7f3d0;
+      max-height: 140px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .ios-hint {
+      display: none;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-size: 0.84rem;
+      color: #93c5fd;
+      line-height: 1.45;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand-badge">
+        <span class="dot"></span>
+        <span>CASA NEI • PROTOTIPO PWA</span>
+      </div>
+      <h1>Alertas Web Push</h1>
+      <p class="subtitle">Prueba nativa con Google FCM y Apple APNs</p>
+    </header>
+
+    <!-- Caja de sugerencia iOS -->
+    <div id="iosHint" class="ios-hint">
+      📲 <strong>Para usuarios de iPhone:</strong> Toca el botón <em>Compartir</em> (ícono de caja con flecha arriba) en Safari y selecciona <strong>"Agregar a pantalla de inicio"</strong> para activar las notificaciones.
+    </div>
+
+    <!-- Estado del Dispositivo -->
+    <div class="card">
+      <div class="card-title">
+        <span>📊</span> Estado del Dispositivo
+      </div>
+
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-label">Modo App</span>
+          <span id="statMode" class="status-value">Verificando...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Permiso Push</span>
+          <span id="statPermission" class="status-value">Verificando...</span>
+        </div>
+        <div class="status-item status-badge">
+          <span class="status-label">Proveedor Push Conectado</span>
+          <span id="statProvider" class="status-value" style="color: var(--accent);">Sin suscripción</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 1: Suscripción Push -->
+    <div class="card">
+      <div class="card-title">
+        <span>1️⃣</span> Activar Web Push
+      </div>
+      <p class="info-box">
+        Solicita permiso al sistema operativo y genera una suscripción cifrada con Google FCM (Chrome/Android) o Apple APNs (Safari/iOS) mediante llaves VAPID.
+      </p>
+      <button id="btnSubscribe" class="btn btn-primary">
+        <span>🔔</span>
+        <span id="btnSubscribeText">Activar Notificaciones Push</span>
+      </button>
+    </div>
+
+    <!-- Paso 2: Prueba de Cuenta Regresiva de 3s -->
+    <div class="card">
+      <div class="card-title">
+        <span>2️⃣</span> Simular Cita Entrante
+      </div>
+      <p class="info-box">
+        Inicia un temporizador de 3 segundos y despacha una notificación Web Push real desde el servidor. Podrás presionar el botón y minimizar la app para recibirla con la pantalla apagada.
+      </p>
+
+      <button id="btnStartCountdown" class="btn btn-warning" disabled>
+        <span>⏱️</span>
+        <span>Simular Cita en 3 Segundos</span>
+      </button>
+
+      <!-- Contador animado -->
+      <div id="countdownContainer" class="countdown-container">
+        <div class="countdown-circle">
+          <span id="countdownNumber" class="countdown-number">3</span>
+        </div>
+        <div class="countdown-tip">
+          ⚡ <strong>¡MINIMIZA LA APP AHORA O BLOQUEA LA PANTALLA!</strong><br>
+          El servidor despachará el mensaje push a los 3 segundos exactos.
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal de Telemetría -->
+    <div class="card">
+      <div class="card-title">
+        <span>📡</span> Registro de Conexión (Logs)
+      </div>
+      <div id="consoleLog" class="console-box">Iniciando aplicación...</div>
+    </div>
+
+    <footer class="footer">
+      Casa Nei Colima • Validación de Notificaciones RFC 8291 / RFC 8292
+    </footer>
+  </div>
+
+  <script src="/pwa-test/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Casa Nei - Cita Confirmada</title>
+  
+  <link rel="manifest" href="/pwa-test/manifest.json">
+  <meta name="theme-color" content="#1b3819">
+  <link rel="apple-touch-icon" href="/pwa-test/icons/icon-192.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #0a140d;
+      --bg-card: rgba(23, 43, 28, 0.85);
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-glow: rgba(16, 185, 129, 0.35);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: rgba(52, 211, 153, 0.22);
+      --whatsapp: #25d366;
+      --whatsapp-dark: #128c7e;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #173820 0%, var(--bg-main) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 40px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      text-align: center;
+    }
+
+    .success-icon-wrap {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.1) 100%);
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 30px var(--primary-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      font-size: 2.8rem;
+      animation: popSuccess 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popSuccess {
+      0% { transform: scale(0.3); opacity: 0; }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .subtitle {
+      font-size: 0.94rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: left;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-text {
+      font-size: 0.9rem;
+      color: #d1d5db;
+      line-height: 1.5;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-whatsapp {
+      background: linear-gradient(135deg, var(--whatsapp) 0%, var(--whatsapp-dark) 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 24px rgba(37, 211, 102, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="success-icon-wrap">
+      <span>✅</span>
+    </div>
+
+    <div>
+      <h1>¡Cita Confirmada!</h1>
+      <p class="subtitle">La cita quedó registrada y asegurada en el sistema con 1 solo toque.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>📋</span> Resumen de la Operación
+      </div>
+      <p class="summary-text">
+        Se confirmó la cita de <strong id="lblPaciente" style="color: #fff;">María López</strong> para <strong>Acupuntura Tradicional</strong> (Hoy a las 17:00 hrs).
+      </p>
+      <p class="summary-text" style="font-size: 0.82rem; color: #9ca3af;">
+        El terapeuta completó el flujo sin necesidad de navegar múltiples pantallas ni llenar formularios adicionales.
+      </p>
+    </div>
+
+    <a id="btnWa" href="#" target="_blank" class="btn btn-whatsapp">
+      <span>💬</span>
+      <span>Avisar al Paciente por WhatsApp</span>
+    </a>
+
+    <a href="/pwa-test/" class="btn btn-secondary">
+      <span>🔄</span>
+      <span>Volver al Panel de Prueba</span>
+    </a>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const paciente = params.get('paciente') || 'María López';
+    document.getElementById('lblPaciente').textContent = paciente;
+
+    const mensaje = `Hola ${paciente}, confirmamos tu cita de Acupuntura Tradicional en Casa Nei para hoy a las 17:00 hrs. ¡Te esperamos!`;
+    const waUrl = `https://wa.me/523121234567?text=${encodeURIComponent(mensaje)}`;
+    document.getElementById('btnWa').href = waUrl;
+  </script>
+</body>
+</html>

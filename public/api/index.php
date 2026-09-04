@@ -46,11 +46,13 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
 }
 
 use App\Agenda\Controllers\AgendaController;
+use App\Agenda\Controllers\PwaTestController;
 use App\Shared\Http\Request;
 use App\Shared\Http\Response;
 
 $request = new Request();
 $controller = new AgendaController();
+$pwaController = new PwaTestController();
 
 $method = $request->getMethod();
 $path = $request->getPath();
@@ -75,6 +77,13 @@ try {
     $method === 'POST' && $path === '/admin/citas/confirmar' => $controller->confirmarCita($request),
     $method === 'POST' && $path === '/admin/citas/cancelar' => $controller->cancelarCita($request),
     $method === 'POST' && $path === '/admin/citas/actualizar' => $controller->actualizarCita($request),
+
+    // Endpoints de prueba para PWA y Web Push (Google FCM / Apple APNs)
+    $method === 'GET' && $path === '/pwa/vapid-key' => $pwaController->obtenerVapidKey($request),
+    $method === 'POST' && $path === '/pwa/suscribir' => $pwaController->suscribirDispositivo($request),
+    $method === 'POST' && $path === '/pwa/enviar-prueba' => $pwaController->enviarNotificacionPrueba($request),
+    $method === 'POST' && $path === '/pwa/confirmar-cita' => $pwaController->confirmarCitaPrueba($request),
+    $method === 'GET' && $path === '/pwa/estado' => $pwaController->obtenerEstado($request),
 
     // Ruta por defecto / 404
     default => Response::error("Ruta no encontrada: [{$method}] {$path}", 404)

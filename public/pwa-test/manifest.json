@@ -1,0 +1,25 @@
+{
+  "name": "Casa Nei - Alertas de Citas",
+  "short_name": "Casa Nei",
+  "description": "Sistema de alertas y confirmación inmediata de citas médicas y terapéuticas.",
+  "start_url": "/pwa-test/",
+  "scope": "/pwa-test/",
+  "display": "standalone",
+  "background_color": "#0d1a10",
+  "theme_color": "#1b3819",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-test/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-test/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

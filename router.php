@@ -13,6 +13,15 @@ if ($uri !== '/' && file_exists($publicFile) && !is_dir($publicFile)) {
     return false; // PHP sirve el archivo estático directamente
 }
 
+// Si es un directorio dentro de public/ con su propio index.html (ej. /pwa-test/)
+if (is_dir($publicFile) && file_exists($publicFile . '/index.html')) {
+    if (!str_ends_with($uri, '/')) {
+        header("Location: {$uri}/", true, 301);
+        return true;
+    }
+    return false;
+}
+
 // Si la ruta inicia con /api, procesarla con el front controller de la API
 if (str_starts_with($uri, '/api')) {
     require __DIR__ . '/public/api/index.php';
