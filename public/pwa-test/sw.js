@@ -51,6 +51,14 @@ self.addEventListener('push', (event) => {
     notificationData.icon = iconUrl;
   }
 
+  // Asegurar que la URL interna de la cita siempre esté dentro del scope (/casa-nei/pwa-test/)
+  if (notificationData.data && notificationData.data.url) {
+    const cleanPath = notificationData.data.url
+      .replace(/^https?:\/\/[^\/]+/, '')
+      .replace(/^\/(?:casa-nei\/)?(?:pwa-test\/)?/, '');
+    notificationData.data.url = new URL(cleanPath, scope).href;
+  }
+
   const options = {
     body: notificationData.body,
     icon: notificationData.icon,
@@ -84,7 +92,17 @@ self.addEventListener('notificationclick', (event) => {
   const paciente = notifData.paciente || 'María López';
 
   const defaultUrl = new URL(`confirmar.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`, scope).href;
-  const targetUrl = notifData.url || defaultUrl;
+
+  // Garantizar que la URL de destino apunte siempre dentro del scope actual (/casa-nei/pwa-test/)
+  let targetUrl;
+  if (notifData.url) {
+    const cleanPath = notifData.url
+      .replace(/^https?:\/\/[^\/]+/, '')
+      .replace(/^\/(?:casa-nei\/)?(?:pwa-test\/)?/, '');
+    targetUrl = new URL(cleanPath, scope).href;
+  } else {
+    targetUrl = defaultUrl;
+  }
 
   // 1. Caso: Acción rápida "Confirmar Cita" (1 Toque directo desde la barra de notificaciones en Android)
   if (action === 'confirmar') {

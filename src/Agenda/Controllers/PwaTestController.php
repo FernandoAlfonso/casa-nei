@@ -143,12 +143,22 @@ class PwaTestController
       $servicio = (string) $request->get('servicio', 'Acupuntura Tradicional');
       $hora = (string) $request->get('hora', 'Hoy a las 17:00 hrs');
 
+      // Detección dinámica de la ruta base del aplicativo (soporta /casa-nei/ o /)
+      $uri = $_SERVER['REQUEST_URI'] ?? '';
+      $baseApp = str_starts_with($uri, '/casa-nei') ? '/casa-nei/pwa-test/' : '/pwa-test/';
+      $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+      $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+      $fullBase = "{$scheme}://{$host}{$baseApp}";
+
+      $urlConfirmar = "{$fullBase}confirmar.html?cita_id={$citaId}&paciente=" . urlencode($paciente);
+      $iconUrl = "{$fullBase}icons/icon-192.png";
+
       // Carga útil estructurada para el Service Worker
       $payload = [
         'title' => '🔔 Solicitud de Cita - Casa Nei',
         'body' => "{$paciente} solicita cita para {$servicio} ({$hora}). Toca para confirmar en 1 toque.",
-        'icon' => '/pwa-test/icons/icon-192.png',
-        'badge' => '/pwa-test/icons/icon-192.png',
+        'icon' => $iconUrl,
+        'badge' => $iconUrl,
         'tag' => 'cita-' . $citaId,
         'renotify' => true,
         'data' => [
@@ -157,7 +167,8 @@ class PwaTestController
           'servicio' => $servicio,
           'hora' => $hora,
           'telefono' => '+52 312 123 4567',
-          'url' => '/pwa-test/confirmar.html?cita_id=' . $citaId . '&paciente=' . urlencode($paciente)
+          'url' => $urlConfirmar,
+          'ruta_relativa' => 'confirmar.html?cita_id=' . $citaId . '&paciente=' . urlencode($paciente)
         ],
         'actions' => [
           [
