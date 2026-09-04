@@ -1,8 +1,7 @@
 /**
  * Service Worker para Casa Nei PWA - Gestión de Web Push y Confirmación Rápida
+ * Compatible con cualquier subdirectorio (ej. /casa-nei/pwa-test/).
  */
-
-const CACHE_NAME = 'casa-nei-pwa-v1';
 
 // Instalación inmediata del Service Worker
 self.addEventListener('install', (event) => {
@@ -14,17 +13,21 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Recepción de mensajes Web Push despachados por Google FCM o Apple APNs
+// Recepción de mensajes Web Push despachados por Apple APNs o Google FCM
 self.addEventListener('push', (event) => {
+  const scope = self.registration.scope;
+  const iconUrl = new URL('icons/icon-192.png', scope).href;
+  const defaultConfirmUrl = new URL('confirmar.html?cita_id=101&paciente=Mar%C3%ADa+L%C3%B3pez', scope).href;
+
   let notificationData = {
     title: '🔔 Solicitud de Cita - Casa Nei',
     body: 'María López ha solicitado una cita para Acupuntura Tradicional (Hoy 17:00 hrs).',
-    icon: '/pwa-test/icons/icon-192.png',
-    badge: '/pwa-test/icons/icon-192.png',
+    icon: iconUrl,
+    badge: iconUrl,
     tag: 'cita-101',
     renotify: true,
     data: {
-      url: '/pwa-test/confirmar.html?cita_id=101&paciente=Mar%C3%ADa+L%C3%B3pez',
+      url: defaultConfirmUrl,
       cita_id: 101,
       paciente: 'María López'
     },
@@ -43,15 +46,19 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Asegurar rutas absolutas para iconos si se recibieron relativas
+  if (!notificationData.icon || !notificationData.icon.startsWith('http')) {
+    notificationData.icon = iconUrl;
+  }
+
   const options = {
     body: notificationData.body,
-    icon: notificationData.icon || '/pwa-test/icons/icon-192.png',
-    badge: notificationData.badge || '/pwa-test/icons/icon-192.png',
+    icon: notificationData.icon,
+    badge: notificationData.badge || iconUrl,
     vibrate: [300, 100, 300, 100, 400],
     tag: notificationData.tag || 'cita-alerta',
     renotify: true,
-    requireInteraction: true,
-    data: notificationData.data || {},
+    data: notificationData.data || { url: defaultConfirmUrl },
     actions: notificationData.actions || [
       { action: 'confirmar', title: '✅ Confirmar Cita' },
       { action: 'ver', title: '📋 Ver Solicitud' }
@@ -67,30 +74,37 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
+  const scope = self.registration.scope;
+  const apiBase = new URL('../api/', scope).href;
+  const confirmApiUrl = new URL('pwa/confirmar-cita', apiBase).href;
+
   const action = event.action;
   const notifData = event.notification.data || {};
   const citaId = notifData.cita_id || 101;
   const paciente = notifData.paciente || 'María López';
-  const targetUrl = notifData.url || `/pwa-test/confirmar.html?cita_id=${citaId}`;
+
+  const defaultUrl = new URL(`confirmar.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`, scope).href;
+  const targetUrl = notifData.url || defaultUrl;
 
   // 1. Caso: Acción rápida "Confirmar Cita" (1 Toque directo desde la barra de notificaciones en Android)
   if (action === 'confirmar') {
+    const successUrl = new URL(`confirmada.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`, scope).href;
+
     event.waitUntil(
-      fetch('/api/pwa/confirmar-cita', {
+      fetch(confirmApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cita_id: citaId, paciente: paciente })
       })
         .then(() => {
-          // Mostrar notificación de confirmación inmediata
           return self.registration.showNotification('✅ Cita Confirmada con Éxito', {
             body: `La cita de ${paciente} quedó confirmada en 1 toque.`,
-            icon: '/pwa-test/icons/icon-192.png',
+            icon: new URL('icons/icon-192.png', scope).href,
             tag: 'cita-confirmada-' + citaId
           });
         })
         .then(() => {
-          return abrirOEnfocarVentana(`/pwa-test/confirmada.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`);
+          return abrirOEnfocarVentana(successUrl);
         })
         .catch((err) => {
           console.error('Error al confirmar en segundo plano:', err);
@@ -100,8 +114,7 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  // 2. Caso: Clic en el globo de notificación o acción "Ver"
-  // Redirecciona a la vista preparada con los datos listos para confirmar en 1 tap
+  // 2. Caso: Clic en el cuerpo de la notificación (iOS y Universal)
   event.waitUntil(abrirOEnfocarVentana(targetUrl));
 });
 
@@ -111,7 +124,7 @@ self.addEventListener('notificationclick', (event) => {
 function abrirOEnfocarVentana(url) {
   return clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
     for (let client of windowClients) {
-      if (client.url.includes('/pwa-test/') && 'focus' in client) {
+      if (client.url && 'focus' in client) {
         client.navigate(url);
         return client.focus();
       }

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Casa Nei - Confirmar Cita</title>
   
-  <link rel="manifest" href="/pwa-test/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1b3819">
-  <link rel="apple-touch-icon" href="/pwa-test/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -248,7 +248,7 @@
       </button>
     </div>
 
-    <a href="/pwa-test/" class="btn-back">⬅ Volver al Panel de Prueba</a>
+    <a href="./" class="btn-back">⬅ Volver al Panel de Prueba</a>
   </div>
 
   <script>
@@ -262,13 +262,16 @@
     const btnConfirmarText = document.getElementById('btnConfirmarText');
     const btnRechazar = document.getElementById('btnRechazar');
 
+    // API Base calculada dinámicamente
+    const apiBase = new URL('../api/', window.location.href).href;
+
     // Botón Confirmar Cita (1 Toque)
     btnConfirmar.addEventListener('click', async () => {
       btnConfirmar.disabled = true;
       btnConfirmarText.textContent = 'Confirmando en el servidor...';
 
       try {
-        const res = await fetch('/api/pwa/confirmar-cita', {
+        const res = await fetch(`${apiBase}pwa/confirmar-cita`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cita_id: citaId, paciente: paciente })
@@ -276,8 +279,8 @@
         const data = await res.json();
 
         if (data.success) {
-          // Redirigir a la vista de cita confirmada
-          window.location.href = `/pwa-test/confirmada.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`;
+          // Redirigir a la vista de cita confirmada de manera relativa
+          window.location.href = `confirmada.html?cita_id=${citaId}&paciente=${encodeURIComponent(paciente)}`;
         } else {
           alert('Error: ' + (data.error || 'No se pudo confirmar'));
           btnConfirmar.disabled = false;
@@ -294,7 +297,7 @@
     btnRechazar.addEventListener('click', () => {
       if (confirm(`¿Seguro que deseas rechazar la solicitud de ${paciente}?`)) {
         alert('Solicitud rechazada.');
-        window.location.href = '/pwa-test/';
+        window.location.href = './';
       }
     });
   </script>

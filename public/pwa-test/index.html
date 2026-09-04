@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Casa Nei - Prueba PWA & Web Push</title>
   
-  <!-- Configuración PWA e Iconos -->
-  <link rel="manifest" href="/pwa-test/manifest.json">
+  <!-- Configuración PWA e Iconos con rutas relativas -->
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1b3819">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Casa Nei">
-  <link rel="apple-touch-icon" href="/pwa-test/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   
   <!-- Tipografía Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -410,6 +410,16 @@
     </footer>
   </div>
 
-  <script src="/pwa-test/app.js"></script>
+  <script>
+    // Capturador visual de errores para depuración móvil
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      const el = document.getElementById('consoleLog');
+      if (el) {
+        el.textContent = `[ERROR ${lineNo}:${columnNo}] ${msg}\n` + el.textContent;
+      }
+      return false;
+    };
+  </script>
+  <script src="app.js"></script>
 </body>
 </html>

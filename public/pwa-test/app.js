@@ -1,5 +1,6 @@
 /**
  * Casa Nei PWA - Lógica de cliente para suscripción Web Push (FCM / APNs)
+ * Compatible con subdirectorios (ej: /casa-nei/pwa-test/) y soporte especializado para iOS Safari / PWA.
  */
 
 // Elementos de la interfaz
@@ -17,11 +18,17 @@ const iosHint = document.getElementById('iosHint');
 let swRegistration = null;
 let currentSubscription = null;
 
+// Base API URL calculada dinámicamente relativa a la ubicación actual
+// Si estamos en https://ola-verde-colima.xyz/casa-nei/pwa-test/ -> apiBase = https://ola-verde-colima.xyz/casa-nei/api/
+const apiBase = new URL('../api/', window.location.href).href;
+
 // Función para registrar mensajes en la consola visual
 function log(msg) {
   const time = new Date().toLocaleTimeString();
-  consoleLog.textContent = `[${time}] ${msg}\n` + consoleLog.textContent;
-  console.log(`[PWA] ${msg}`);
+  if (consoleLog) {
+    consoleLog.textContent = `[${time}] ${msg}\n` + consoleLog.textContent;
+  }
+  console.log(`[PWA ${time}] ${msg}`);
 }
 
 // Conversor de clave pública Base64Url a Uint8Array (requerido por pushManager.subscribe)
@@ -42,46 +49,59 @@ function urlBase64ToUint8Array(base64String) {
 
 // Inicialización de la aplicación
 async function init() {
-  // 1. Detectar modo standalone (PWA instalada)
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  statMode.innerHTML = isStandalone ? '<span style="color: #10b981;">📱 Instalada (PWA)</span>' : '<span style="color: #fbbf24;">🌐 Navegador Web</span>';
+  log(`Iniciando en: ${window.location.href}`);
+  log(`API Base detectada: ${apiBase}`);
 
-  // 2. Detectar iOS para mostrar guía de instalación
+  // 1. Detectar modo standalone (PWA instalada en iOS o Android)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  statMode.innerHTML = isStandalone
+    ? '<span style="color: #10b981;">📱 Instalada (PWA)</span>'
+    : '<span style="color: #fbbf24;">🌐 Navegador Web</span>';
+
+  // 2. Detectar iOS para mostrar advertencia o guía
   const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  if (isIos && !isStandalone) {
+  if (isIos && !isStandalone && iosHint) {
     iosHint.style.display = 'block';
   }
 
-  // 3. Verificar compatibilidad con Service Worker y Push
+  // 3. Validar soporte de APIs en el navegador móvil
   if (!('serviceWorker' in navigator)) {
-    log('❌ Service Worker no es soportado en este navegador.');
+    log('❌ Service Worker NO soportado en este navegador.');
     statPermission.textContent = 'No soportado';
     return;
   }
 
   if (!('PushManager' in window)) {
-    log('⚠️ PushManager no soportado. (En iPhone requiere agregar a pantalla de inicio).');
-    statPermission.textContent = 'Push no disponible';
-    return;
+    if (isIos && !isStandalone) {
+      log('⚠️ PushManager no disponible en Safari normal. DEBES agregar la app a pantalla de inicio en iOS 16.4+ para habilitar Push.');
+    } else {
+      log('⚠️ PushManager no detectado en este dispositivo.');
+    }
   }
 
   try {
-    // 4. Registrar Service Worker con scope /pwa-test/
-    swRegistration = await navigator.serviceWorker.register('/pwa-test/sw.js', { scope: '/pwa-test/' });
-    log('✅ Service Worker registrado con éxito (scope: /pwa-test/).');
+    // 4. Registrar Service Worker con ruta relativa 'sw.js'
+    swRegistration = await navigator.serviceWorker.register('sw.js', { scope: './' });
+    log('✅ Service Worker registrado con éxito en scope relativo.');
+
+    // Esperar a que el Service Worker esté listo
+    await navigator.serviceWorker.ready;
+    log('✅ Service Worker activo y listo.');
 
     // 5. Verificar estado actual de permisos
     actualizarEstadoPermisos();
 
     // 6. Verificar si ya existe suscripción previa
-    currentSubscription = await swRegistration.pushManager.getSubscription();
-    if (currentSubscription) {
-      log('ℹ️ Suscripción push activa encontrada.');
-      actualizarProveedorUI(currentSubscription.endpoint);
-      btnStartCountdown.disabled = false;
-      btnSubscribeText.textContent = 'Actualizar Suscripción Push';
-    } else {
-      log('ℹ️ Sin suscripción push activa. Presiona el botón para activar.');
+    if (swRegistration.pushManager) {
+      currentSubscription = await swRegistration.pushManager.getSubscription();
+      if (currentSubscription) {
+        log('ℹ️ Suscripción push activa recuperada.');
+        actualizarProveedorUI(currentSubscription.endpoint);
+        btnStartCountdown.disabled = false;
+        btnSubscribeText.textContent = 'Actualizar Suscripción Push';
+      } else {
+        log('ℹ️ Sin suscripción previa. Toca el botón para activar notificaciones.');
+      }
     }
   } catch (err) {
     log(`❌ Error al inicializar Service Worker: ${err.message}`);
@@ -90,6 +110,10 @@ async function init() {
 
 // Actualiza el indicador visual de permisos
 function actualizarEstadoPermisos() {
+  if (!('Notification' in window)) {
+    statPermission.innerHTML = '<span style="color: #ef4444;">No disponible</span>';
+    return;
+  }
   const perm = Notification.permission;
   if (perm === 'granted') {
     statPermission.innerHTML = '<span style="color: #10b981;">Concedido ✅</span>';
@@ -102,6 +126,7 @@ function actualizarEstadoPermisos() {
 
 // Actualiza el proveedor push detectado (FCM o APNs)
 function actualizarProveedorUI(endpoint) {
+  if (!endpoint) return;
   if (endpoint.includes('fcm.googleapis.com')) {
     statProvider.innerHTML = '<span style="color: #10b981;">🟢 Google FCM (Android)</span>';
   } else if (endpoint.includes('push.apple.com')) {
@@ -111,49 +136,93 @@ function actualizarProveedorUI(endpoint) {
   }
 }
 
+// Solicitar permisos de notificación (compatible con Promise y Callback en WebKit)
+async function solicitarPermisoNotificacion() {
+  if (!('Notification' in window)) {
+    throw new Error('La API de Notificaciones no está disponible en este navegador.');
+  }
+
+  // Si ya están concedidos
+  if (Notification.permission === 'granted') {
+    return 'granted';
+  }
+
+  // Compatibilidad con Promise y Callback para distintas versiones de iOS Safari
+  let permission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch (err) {
+    permission = await new Promise((resolve) => {
+      Notification.requestPermission((result) => resolve(result));
+    });
+  }
+  return permission;
+}
+
 // Evento: Botón Activar / Suscribir Notificaciones Push
 btnSubscribe.addEventListener('click', async () => {
   btnSubscribe.disabled = true;
-  log('Iniciando proceso de suscripción Web Push...');
+  log('👉 Iniciando proceso de activación de Web Push...');
 
   try {
-    // 1. Solicitar permiso de notificación explícito
-    const permission = await Notification.requestPermission();
+    // 1. Solicitar permiso explícito al sistema operativo
+    const permission = await solicitarPermisoNotificacion();
     actualizarEstadoPermisos();
 
     if (permission !== 'granted') {
-      log('❌ Permiso de notificaciones rechazado por el usuario.');
-      alert('Debes permitir las notificaciones para que el celular pueda recibir las alertas de citas.');
+      log('❌ Permiso de notificaciones no fue concedido (estado: ' + permission + ').');
+      if (permission === 'denied') {
+        alert('Las notificaciones están bloqueadas para esta aplicación. En tu iPhone ve a Configuración > Notificaciones y permite las alertas para Casa Nei.');
+      } else {
+        alert('Debes aceptar el diálogo de notificaciones para poder recibir alertas.');
+      }
       btnSubscribe.disabled = false;
       return;
     }
     log('✅ Permiso de notificaciones otorgado por el sistema.');
 
-    // 2. Obtener la clave pública VAPID del servidor PHP
-    log('Solicitando clave pública VAPID al servidor...');
-    const vapidRes = await fetch('/api/pwa/vapid-key');
-    const vapidJson = await vapidRes.json();
+    // 2. Validar que el Service Worker esté listo
+    if (!swRegistration) {
+      log('Registrando Service Worker antes de suscribir...');
+      swRegistration = await navigator.serviceWorker.ready;
+    }
 
+    if (!swRegistration.pushManager) {
+      throw new Error('PushManager no está disponible en este dispositivo. Asegúrate de haber instalado la PWA desde la pantalla de inicio.');
+    }
+
+    // 3. Obtener la clave pública VAPID del servidor PHP
+    const vapidUrl = `${apiBase}pwa/vapid-key`;
+    log(`Solicitando clave VAPID a: ${vapidUrl}`);
+
+    const vapidRes = await fetch(vapidUrl);
+    if (!vapidRes.ok) {
+      throw new Error(`Servidor retornó HTTP ${vapidRes.status} al consultar clave VAPID.`);
+    }
+
+    const vapidJson = await vapidRes.json();
     if (!vapidJson.success || !vapidJson.data?.publicKey) {
-      throw new Error(vapidJson.error || 'No se pudo obtener la clave VAPID');
+      throw new Error(vapidJson.error || 'No se recibió la clave pública VAPID.');
     }
 
     const applicationServerKey = urlBase64ToUint8Array(vapidJson.data.publicKey);
-    log('Clave VAPID recibida y convertida.');
+    log('Clave VAPID recibida y convertida correctamente.');
 
-    // 3. Suscribir el dispositivo ante el Push Service del navegador (Google FCM / Apple APNs)
-    log('Contactando servicio Push del navegador...');
+    // 4. Suscribir el dispositivo ante el Push Service del navegador (Apple APNs o Google FCM)
+    log('Contactando servicio Push de Apple / Google...');
     currentSubscription = await swRegistration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: applicationServerKey
     });
 
     const subJson = currentSubscription.toJSON();
-    log(`Endpoint obtenido: ${subJson.endpoint.substring(0, 45)}...`);
+    log(`🎉 Suscripción generada! Endpoint: ${subJson.endpoint.substring(0, 50)}...`);
 
-    // 4. Enviar la suscripción al servidor PHP para guardarla
-    log('Registrando suscripción en el servidor PHP...');
-    const regRes = await fetch('/api/pwa/suscribir', {
+    // 5. Enviar la suscripción al servidor PHP para guardarla
+    const subUrl = `${apiBase}pwa/suscribir`;
+    log(`Enviando suscripción al servidor: ${subUrl}`);
+
+    const regRes = await fetch(subUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(subJson)
@@ -161,16 +230,17 @@ btnSubscribe.addEventListener('click', async () => {
     const regData = await regRes.json();
 
     if (!regData.success) {
-      throw new Error(regData.error || 'Error al persistir la suscripción');
+      throw new Error(regData.error || 'Error al persistir la suscripción en el servidor.');
     }
 
     actualizarProveedorUI(subJson.endpoint);
     btnStartCountdown.disabled = false;
     btnSubscribeText.textContent = 'Suscripción Activa ✅';
-    log(`🎉 ¡Dispositivo suscrito exitosamente a ${regData.data?.proveedor || 'Web Push'}!`);
+    log(`✅ ¡Dispositivo registrado exitosamente con ${regData.data?.proveedor || 'Web Push'}!`);
+    alert(`¡Listo! Notificaciones activadas correctamente con ${regData.data?.proveedor || 'Apple APNs / Google FCM'}. Ahora puedes hacer la prueba de los 3 segundos.`);
   } catch (err) {
-    log(`❌ Error en la suscripción: ${err.message}`);
-    alert(`Error al suscribir: ${err.message}`);
+    log(`❌ Error: ${err.message}`);
+    alert(`Error al activar notificaciones: ${err.message}`);
   } finally {
     btnSubscribe.disabled = false;
   }
@@ -179,7 +249,7 @@ btnSubscribe.addEventListener('click', async () => {
 // Evento: Botón Simular Cita en 3 Segundos
 btnStartCountdown.addEventListener('click', async () => {
   if (!currentSubscription) {
-    alert('Primero activa las notificaciones push.');
+    alert('Primero debes presionar el botón de Activar Notificaciones Push.');
     return;
   }
 
@@ -189,12 +259,11 @@ btnStartCountdown.addEventListener('click', async () => {
   countdownNumber.textContent = secondsLeft;
 
   log('⏱️ Cuenta regresiva iniciada (3 segundos)...');
-  log('Despachando solicitud con delay=3 al servidor PHP...');
+  log('⚡ Despachando orden de Push con delay=3 al servidor PHP...');
 
-  // Enviamos la petición al servidor con delay=3 de inmediato.
-  // Así el servidor ejecuta sleep(3) y manda el Web Push real,
-  // garantizando la llegada incluso si el usuario apaga la pantalla de inmediato.
-  fetch('/api/pwa/enviar-prueba?delay=3', {
+  // Se envía la petición al servidor con delay=3 de inmediato
+  const testUrl = `${apiBase}pwa/enviar-prueba?delay=3`;
+  fetch(testUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ subscription: currentSubscription.toJSON() })
@@ -202,16 +271,16 @@ btnStartCountdown.addEventListener('click', async () => {
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        log(`🚀 Push despachado por el servidor exitosamente: HTTP ${data.data?.http_code} (${data.data?.servicio})`);
+        log(`🚀 Servidor reporta entrega a ${data.data?.servicio}: HTTP ${data.data?.http_code}`);
       } else {
         log(`⚠️ Respuesta del servidor: ${data.error}`);
       }
     })
     .catch((err) => {
-      log(`❌ Error al contactar el servidor: ${err.message}`);
+      log(`❌ Error de conexión con el servidor: ${err.message}`);
     });
 
-  // Animación del contador visual en pantalla
+  // Animación visual del contador en pantalla
   const interval = setInterval(() => {
     secondsLeft--;
     if (secondsLeft > 0) {
@@ -219,7 +288,7 @@ btnStartCountdown.addEventListener('click', async () => {
     } else {
       clearInterval(interval);
       countdownNumber.textContent = '🔔';
-      log('¡Tiempo cumplido! La alerta ha sido emitida hacia tu celular.');
+      log('¡3 segundos cumplidos! Revisa la notificación en la pantalla de tu celular.');
 
       setTimeout(() => {
         countdownContainer.style.display = 'none';
@@ -229,5 +298,9 @@ btnStartCountdown.addEventListener('click', async () => {
   }, 1000);
 });
 
-// Arrancar inicialización al cargar la página
-window.addEventListener('DOMContentLoaded', init);
+// Inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
