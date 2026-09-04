@@ -1,6 +1,4 @@
-# Local Netlify folder
-.netlify
-node_modules/
 skills/
 src/config.php
 src/Shared/db/schema.sql
+.ai

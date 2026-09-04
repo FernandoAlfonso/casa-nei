@@ -460,6 +460,20 @@ section {
   color: white;
 }
 
+.agenda-step-item.clickable-step {
+  cursor: pointer;
+}
+
+.agenda-step-item.clickable-step:hover .step-num {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(44, 76, 59, 0.3);
+}
+
+.agenda-step-item.clickable-step:hover .step-label {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
 .step-connector {
   flex: 1;
   max-width: 60px;
@@ -658,6 +672,9 @@ section {
 }
 
 .agenda-calendar-day {
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--surface-color);
   border: 2px solid #e5e7eb;
   border-radius: 12px;
@@ -670,6 +687,15 @@ section {
   align-items: center;
   justify-content: center;
   min-height: 85px;
+}
+
+.agenda-calendar-day:focus-visible,
+.agenda-service-card:focus-visible,
+.btn-slot-hora:focus-visible,
+.btn-change-step:focus-visible,
+.agenda-step-item:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .agenda-calendar-day .day-name {
