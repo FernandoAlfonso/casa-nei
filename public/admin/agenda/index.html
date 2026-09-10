@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Casa Nei - Agenda Admin</title>
+
+  <!-- Metadatos e Iconos PWA (Rutas Relativas) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1b3819">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Agenda Admin">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Tipografía Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #0a140d;
+      --bg-card: rgba(23, 43, 28, 0.75);
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-glow: rgba(16, 185, 129, 0.25);
+      --accent: #fbbf24;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border: rgba(52, 211, 153, 0.18);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #173820 0%, var(--bg-main) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px 40px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      text-align: center;
+    }
+
+    /* Badge superior */
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--primary);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Icono central de calendario */
+    .icon-wrapper {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(27, 56, 25, 0.6) 100%);
+      border: 2px solid var(--border);
+      box-shadow: 0 0 35px var(--primary-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.8rem;
+      animation: floatIcon 3s ease-in-out infinite;
+    }
+
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* Textos principales */
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #ffffff 40%, #a7f3d0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .construction-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Tarjeta de estado */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 20px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.88rem;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-val {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ios-tip {
+      display: none;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-size: 0.82rem;
+      color: #93c5fd;
+      line-height: 1.45;
+      text-align: left;
+    }
+
+    .footer {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Badge Corporativo -->
+    <div class="brand-badge">
+      <span class="dot"></span>
+      <span>CASA NEI • ADMINISTRACIÓN</span>
+    </div>
+
+    <!-- Icono de Agenda -->
+    <div class="icon-wrapper">
+      <span>📅</span>
+    </div>
+
+    <!-- Títulos -->
+    <div>
+      <h1>Casa Nei</h1>
+      <div class="construction-badge">
+        <span>🚧</span> Agenda admin en construcción
+      </div>
+    </div>
+
+    <!-- Guía para iPhone si se abre en Safari -->
+    <div id="iosTip" class="ios-tip">
+      📲 <strong>Instalación en iPhone:</strong> Toca el botón <em>Compartir</em> en Safari y selecciona <strong>"Agregar a pantalla de inicio"</strong> para instalar tu app exclusiva de Agenda.
+    </div>
+
+    <!-- Tarjeta de Diagnóstico PWA -->
+    <div class="card">
+      <div class="card-title">
+        <span>⚙️</span> Estado de la Aplicación
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Módulo</span>
+        <span class="info-val" style="color: #ffffff;">Agenda de Citas</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Modo de Pantalla</span>
+        <span id="statMode" class="info-val">Verificando...</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Service Worker</span>
+        <span id="statSw" class="info-val">Registrando...</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Aislamiento</span>
+        <span class="info-val" style="color: var(--primary);">Independiente (Micro-PWA)</span>
+      </div>
+    </div>
+
+    <footer class="footer">
+      Casa Nei Colima • PWA Lista para vincular a la Agenda
+    </footer>
+  </div>
+
+  <script>
+    // 1. Detectar modo standalone (instalada en pantalla de inicio)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const statMode = document.getElementById('statMode');
+    statMode.innerHTML = isStandalone 
+      ? '<span style="color: #10b981;">📱 Instalada (PWA)</span>' 
+      : '<span style="color: #fbbf24;">🌐 Navegador Web</span>';
+
+    // 2. Mostrar sugerencia en iPhone si está en Safari
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const iosTip = document.getElementById('iosTip');
+    if (isIos && !isStandalone && iosTip) {
+      iosTip.style.display = 'block';
+    }
+
+    // 3. Registrar Service Worker con ruta relativa
+    const statSw = document.getElementById('statSw');
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js', { scope: './' })
+        .then(() => {
+          statSw.innerHTML = '<span style="color: #10b981;">Activo y Listo ✅</span>';
+        })
+        .catch((err) => {
+          statSw.innerHTML = '<span style="color: #ef4444;">Error al registrar</span>';
+          console.error('Error SW:', err);
+        });
+    } else {
+      statSw.innerHTML = '<span style="color: #ef4444;">No soportado</span>';
+    }
+  </script>
+</body>
+</html>
