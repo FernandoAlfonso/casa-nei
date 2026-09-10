@@ -8,6 +8,7 @@
  * @property {number} id
  * @property {string} nombre
  * @property {string} [descripcion]
+ * @property {string|null} [instrucciones]
  * @property {number} duracion_minutos
  * @property {number|string} precio
  * @property {number} activo
@@ -46,6 +47,7 @@
  * @property {string} fecha_cita
  * @property {string} hora_inicio
  * @property {string} [notas_cliente]
+ * @property {'whatsapp'|'llamada'} [medio_contacto]
  */
 
 /**
@@ -57,7 +59,9 @@
  * @property {string} hora_inicio
  * @property {Servicio} servicio
  * @property {Cliente} cliente
- * @property {string} whatsapp_url
+ * @property {'whatsapp'|'llamada'} [medio_contacto]
+ * @property {string|null} [whatsapp_url]
+ * @property {string} [telefono_admin]
  */
 
 export class AgendaApi {

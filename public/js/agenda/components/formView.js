@@ -15,6 +15,15 @@ import { formatDateLegible } from '../utils/date.js';
  * @param {boolean} [submitting=false] - Indica si el formulario se está enviando.
  * @returns {string} Markup HTML accesible.
  */
+/**
+ * Renderiza el formulario y resumen de la cita.
+ * @param {import('../api.js').Servicio} servicio - Servicio seleccionado.
+ * @param {string} fecha - Fecha seleccionada (YYYY-MM-DD).
+ * @param {import('../api.js').SlotHora} hora - Horario seleccionado.
+ * @param {import('../api.js').Cliente|null} [cliente=null] - Cliente reconocido previamente.
+ * @param {boolean} [submitting=false] - Indica si el formulario se está enviando.
+ * @returns {string} Markup HTML accesible.
+ */
 export function renderFormView(servicio, fecha, hora, cliente = null, submitting = false) {
   const precioNum = parseFloat(String(servicio.precio || 0));
   const precioTexto = precioNum > 0
@@ -24,6 +33,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
   const fechaTexto = formatDateLegible(fecha);
   const clienteNombre = cliente ? escapeHtml(cliente.nombre_completo) : '';
   const clienteTelefono = cliente ? escapeHtml(cliente.telefono) : '';
+  const tieneInstrucciones = Boolean(servicio.instrucciones && String(servicio.instrucciones).trim() !== '');
 
   let html = `
     <div class="agenda-step-content animate-fade-in">
@@ -54,25 +64,73 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
             <strong class="price-highlight">${precioTexto}</strong>
           </div>
 
+          ${tieneInstrucciones ? `
+            <!-- Instrucciones del Servicio (Solo si existen) -->
+            <div class="summary-instructions" role="note" aria-label="Instrucciones previas al servicio">
+              <div class="instructions-header">
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                <strong>Instrucciones del servicio:</strong>
+              </div>
+              <p class="instructions-text">${escapeHtml(servicio.instrucciones)}</p>
+            </div>
+          ` : ''}
+
           <button class="btn-change-step" id="btn-cambiar-fecha-hora" type="button" style="margin-top: 1.2rem; width: 100%;">
             <i class="fas fa-calendar-alt" aria-hidden="true"></i> Cambiar fecha u horario
           </button>
         </aside>
 
         <!-- Formulario de Datos del Paciente -->
-        <section class="agenda-form-card" aria-label="Formulario de contacto del paciente">
+        <div class="agenda-form-card" role="region" aria-label="Formulario de contacto del paciente">
           <h4><i class="fas fa-user-edit" aria-hidden="true"></i> Completa tus datos</h4>
-          <p class="form-desc">Ingresa tu número de WhatsApp para confirmar tu espacio y precargar tu información.</p>
+          <p class="form-desc">Ingresa tus datos para registrar tu espacio y confirmar tu atención.</p>
 
-          <!-- Banner de error accesible (reemplaza a los alerts) -->
+          <!-- Atajo directo para agendar por llamada telefónica -->
+          <div class="no-whatsapp-banner" role="complementary">
+            <div class="banner-text">
+              <i class="fas fa-phone-volume" aria-hidden="true"></i>
+              <span>¿No tienes WhatsApp o prefieres agendar por llamada?</span>
+            </div>
+            <a href="tel:+523121064455" class="btn-call-shortcut" aria-label="Llamar directamente al 312 106 4455">
+              <i class="fas fa-phone-alt" aria-hidden="true"></i> Llamar al (312) 106-4455
+            </a>
+          </div>
+
+          <!-- Banner de error accesible -->
           <div id="form-error-box" class="agenda-alert error" style="display: none;" role="alert"></div>
 
           <form id="form-agendar-cita" novalidate>
             
-            <!-- Campo: Celular / WhatsApp -->
+            <!-- Selector de Preferencia de Confirmación -->
+            <div class="form-group contact-method-group">
+              <label class="contact-method-title">
+                <i class="fas fa-paper-plane" aria-hidden="true"></i> ¿Cómo prefieres confirmar tu cita? <span class="req" aria-hidden="true">*</span>
+              </label>
+              <div class="contact-options-grid" role="radiogroup" aria-label="Preferencia de contacto">
+                <label class="contact-option-card selected" id="opt-method-whatsapp">
+                  <input type="radio" name="medio_contacto" value="whatsapp" checked>
+                  <span class="option-icon"><i class="fab fa-whatsapp" aria-hidden="true"></i></span>
+                  <span class="option-info">
+                    <strong>Vía WhatsApp</strong>
+                    <small>Recomendado • Mensaje precargado</small>
+                  </span>
+                </label>
+
+                <label class="contact-option-card" id="opt-method-llamada">
+                  <input type="radio" name="medio_contacto" value="llamada">
+                  <span class="option-icon phone-icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></span>
+                  <span class="option-info">
+                    <strong>Vía Llamada Celular</strong>
+                    <small>Si no cuentas con WhatsApp</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Campo: Celular -->
             <div class="form-group">
-              <label for="paciente_telefono">
-                <i class="fab fa-whatsapp" aria-hidden="true"></i> Número de Celular / WhatsApp <span class="req" aria-hidden="true">*</span>
+              <label for="paciente_telefono" id="label-telefono">
+                <i class="fas fa-mobile-alt" aria-hidden="true"></i> Número de Celular <span class="req" aria-hidden="true">*</span>
               </label>
               <input type="tel" 
                      id="paciente_telefono" 
@@ -84,7 +142,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
                      autocomplete="tel"
                      aria-describedby="telefono-hint">
               <small id="telefono-hint" class="form-hint">
-                Se usará para buscar si ya eres paciente, autocompletar tus datos y enviar tu recordatorio.
+                Se usará para autocompletar tus datos si ya eres paciente y coordinar tu cita.
               </small>
             </div>
 
@@ -122,13 +180,13 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
                         placeholder="Describe brevemente tus dudas o molestias para prepararnos mejor..."></textarea>
             </div>
 
-            <!-- Botón de Envío -->
+            <!-- Botón de Envío Dinámico -->
             <button type="submit" 
                     id="btn-submit-cita" 
                     class="btn-primary btn-submit-agenda"
                     ${submitting ? 'disabled' : ''}>
               ${submitting 
-                ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Agendando tu cita...' 
+                ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Procesando tu cita...' 
                 : '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Generar WhatsApp'}
             </button>
 
@@ -136,7 +194,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
               <i class="fas fa-shield-alt" aria-hidden="true"></i> Tus datos personales están protegidos de forma confidencial y segura.
             </p>
           </form>
-        </section>
+        </div>
 
       </div>
     </div>
@@ -149,7 +207,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
  * Asocia los escuchadores de eventos para el formulario de citas.
  * @param {HTMLElement} container - Contenedor raíz.
  * @param {function(string): void} onPhoneLookup - Callback para consultar cliente al escribir 10 dígitos.
- * @param {function({ nombre: string, telefono: string, notas: string }): void} onSubmit - Callback de envío con datos limpios.
+ * @param {function({ nombre: string, telefono: string, notas: string, medio_contacto: string }): void} onSubmit - Callback de envío con datos limpios.
  * @param {function(): void} onChangeFechaHora - Callback al pulsar "Cambiar fecha u horario".
  */
 export function attachFormListeners(container, onPhoneLookup, onSubmit, onChangeFechaHora) {
@@ -163,6 +221,32 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
   const inputNotas = container.querySelector('#paciente_notas');
   const errorBox = container.querySelector('#form-error-box');
   const form = container.querySelector('#form-agendar-cita');
+  const submitBtn = container.querySelector('#btn-submit-cita');
+
+  // Control interactivo del método de contacto (WhatsApp vs Llamada)
+  const radioMethodWhatsApp = container.querySelector('input[name="medio_contacto"][value="whatsapp"]');
+  const radioMethodLlamada = container.querySelector('input[name="medio_contacto"][value="llamada"]');
+  const cardWhatsApp = container.querySelector('#opt-method-whatsapp');
+  const cardLlamada = container.querySelector('#opt-method-llamada');
+
+  function updateMethodUI(method) {
+    if (method === 'llamada') {
+      cardLlamada?.classList.add('selected');
+      cardWhatsApp?.classList.remove('selected');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-phone-alt" aria-hidden="true"></i> Agendar y Confirmar por Llamada';
+      }
+    } else {
+      cardWhatsApp?.classList.add('selected');
+      cardLlamada?.classList.remove('selected');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Generar WhatsApp';
+      }
+    }
+  }
+
+  radioMethodWhatsApp?.addEventListener('change', () => updateMethodUI('whatsapp'));
+  radioMethodLlamada?.addEventListener('change', () => updateMethodUI('llamada'));
 
   // Debounce para búsqueda automática de cliente por teléfono
   let debounceTimer = null;
@@ -190,6 +274,8 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
       const rawTelefono = inputTelefono ? inputTelefono.value : '';
       const rawNombre = inputNombre ? inputNombre.value : '';
       const rawNotas = inputNotas ? inputNotas.value : '';
+      const selectedMethodInput = form.querySelector('input[name="medio_contacto"]:checked');
+      const medioContacto = selectedMethodInput ? selectedMethodInput.value : 'whatsapp';
 
       const cleanPhone = sanitizePhone(rawTelefono);
       const cleanNombre = rawNombre.trim();
@@ -212,7 +298,8 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
         onSubmit({
           nombre: cleanNombre,
           telefono: cleanPhone,
-          notas: cleanNotas
+          notas: cleanNotas,
+          medio_contacto: medioContacto
         });
       }
     });

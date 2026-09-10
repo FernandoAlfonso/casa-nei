@@ -103,8 +103,8 @@ class AgendaController
 
   /**
    * POST /api/citas/agendar
-   * Body: { "nombre_completo", "telefono", "servicio_id", "fecha_cita", "hora_inicio", "notas_cliente" }
-   * Registra la cita y retorna el código y enlace de WhatsApp para el Administrador.
+   * Body: { "nombre_completo", "telefono", "servicio_id", "fecha_cita", "hora_inicio", "notas_cliente", "medio_contacto" }
+   * Registra la cita y retorna el código y enlace de WhatsApp o datos de llamada telefónica.
    */
   public function agendarCita(Request $request): void
   {
@@ -115,6 +115,8 @@ class AgendaController
       $fecha = trim((string) $request->get('fecha_cita', ''));
       $hora = trim((string) $request->get('hora_inicio', ''));
       $notas = $request->get('notas_cliente');
+      $medioContactoRaw = strtolower(trim((string) $request->get('medio_contacto', 'whatsapp')));
+      $medioContacto = in_array($medioContactoRaw, ['whatsapp', 'llamada'], true) ? $medioContactoRaw : 'whatsapp';
 
       $errores = [];
       if (empty($nombre)) $errores[] = "El nombre completo es obligatorio.";
@@ -133,10 +135,15 @@ class AgendaController
         servicioId: $servicioId,
         fechaCita: $fecha,
         horaInicio: $hora,
-        notasCliente: $notas
+        notasCliente: $notas,
+        medioContacto: $medioContacto
       );
 
-      Response::success($resultado, "Cita agendada con éxito. Procede a enviar el WhatsApp.", 201);
+      $mensajeRespuesta = $medioContacto === 'llamada'
+        ? "Cita agendada con éxito. Procede a comunicarte por llamada telefónica."
+        : "Cita agendada con éxito. Procede a enviar el WhatsApp.";
+
+      Response::success($resultado, $mensajeRespuesta, 201);
     } catch (Exception $e) {
       Response::error($e->getMessage(), 400);
     }

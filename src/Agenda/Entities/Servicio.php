@@ -11,6 +11,7 @@ class Servicio
     private ?int $id = null,
     private string $nombre = '',
     private ?string $descripcion = null,
+    private ?string $instrucciones = null,
     private int $duracionMinutos = 60,
     private ?float $precio = null,
     private bool $activo = true,
@@ -49,6 +50,26 @@ class Servicio
   public function setDescripcion(?string $descripcion): self
   {
     $this->descripcion = $descripcion;
+    return $this;
+  }
+
+  /**
+   * Obtiene las instrucciones o recomendaciones previas para el paciente.
+   * @return string|null
+   */
+  public function getInstrucciones(): ?string
+  {
+    return $this->instrucciones;
+  }
+
+  /**
+   * Establece las instrucciones o notas previas del servicio.
+   * @param string|null $instrucciones
+   * @return self
+   */
+  public function setInstrucciones(?string $instrucciones): self
+  {
+    $this->instrucciones = $instrucciones ? trim($instrucciones) : null;
     return $this;
   }
 
@@ -105,6 +126,7 @@ class Servicio
       id: isset($data['id']) ? (int) $data['id'] : null,
       nombre: $data['nombre'] ?? '',
       descripcion: $data['descripcion'] ?? null,
+      instrucciones: $data['instrucciones'] ?? null,
       duracionMinutos: (int) ($data['duracion_minutos'] ?? 60),
       precio: isset($data['precio']) ? (float) $data['precio'] : null,
       activo: isset($data['activo']) ? (bool) $data['activo'] : true,
@@ -121,6 +143,7 @@ class Servicio
       'id' => $this->id,
       'nombre' => $this->nombre,
       'descripcion' => $this->descripcion,
+      'instrucciones' => $this->instrucciones,
       'duracion_minutos' => $this->duracionMinutos,
       'precio' => $this->precio,
       'activo' => $this->activo ? 1 : 0,

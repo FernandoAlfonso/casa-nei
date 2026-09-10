@@ -54,8 +54,17 @@ class AgendaService
 
   /**
    * Caso de Uso: Agendar una nueva cita (Estado: Pendiente)
-   * Valida disponibilidad, asocia o registra al cliente y genera el link de WhatsApp para el Admin.
+   * Valida disponibilidad, asocia o registra al cliente y genera el link de WhatsApp para el Admin
+   * o prepara la alternativa de llamada telefónica.
    *
+   * @param string $nombreCompleto
+   * @param string $telefono
+   * @param int $servicioId
+   * @param string $fechaCita
+   * @param string $horaInicio
+   * @param string|null $notasCliente
+   * @param string $medioContacto 'whatsapp' | 'llamada'
+   * @return array
    * @throws Exception
    */
   public function agendarCita(
@@ -64,7 +73,8 @@ class AgendaService
     int $servicioId,
     string $fechaCita,
     string $horaInicio,
-    ?string $notasCliente = null
+    ?string $notasCliente = null,
+    string $medioContacto = 'whatsapp'
   ): array {
     $servicio = $this->servicioRepo->buscarPorId($servicioId);
     if (!$servicio || !$servicio->isActivo()) {
@@ -94,6 +104,13 @@ class AgendaService
       }
     }
 
+    // Si la solicitud es vía llamada telefónica, se registra en las notas para el terapeuta
+    $notaFinal = $notasCliente;
+    if ($medioContacto === 'llamada') {
+      $etiquetaLlamada = "[Solicitud sin WhatsApp - Contacto por Llamada]";
+      $notaFinal = $notaFinal ? "{$etiquetaLlamada} {$notaFinal}" : $etiquetaLlamada;
+    }
+
     // 3. Crear entidad de Cita
     $codigoCita = CitaRepository::generarCodigo();
     $cita = new Cita(
@@ -104,34 +121,42 @@ class AgendaService
       horaInicio: $horaInicioNorm,
       horaFin: $horaFin,
       estado: EstadoCita::PENDIENTE,
-      notasCliente: $notasCliente
+      notasCliente: $notaFinal
     );
 
     $citaId = $this->citaRepo->crear($cita);
     $cita->setId($citaId);
 
-    // 4. Generar mensaje precargado de WhatsApp para el Administrador
-    $mensajeWhatsapp = $this->generarMensajeSolicitudAdmin(
-      nombre: $nombreCompleto,
-      telefono: $telefono,
-      servicioNombre: $servicio->getNombre(),
-      fecha: $fechaCita,
-      horaInicio: $inicioObj->format('H:i'),
-      horaFin: $finObj->format('H:i'),
-      codigoCita: $codigoCita,
-      notas: $notasCliente
-    );
+    // 4. Generar mensaje de WhatsApp si el paciente cuenta con la app
+    $mensajeWhatsapp = null;
+    $whatsappUrl = null;
 
-    $whatsappUrl = $this->crearEnlaceWhatsapp($this->adminWhatsapp, $mensajeWhatsapp);
+    if ($medioContacto === 'whatsapp') {
+      $mensajeWhatsapp = $this->generarMensajeSolicitudAdmin(
+        nombre: $nombreCompleto,
+        telefono: $telefono,
+        servicioNombre: $servicio->getNombre(),
+        fecha: $fechaCita,
+        horaInicio: $inicioObj->format('H:i'),
+        horaFin: $finObj->format('H:i'),
+        codigoCita: $codigoCita,
+        notas: $notasCliente
+      );
+
+      $whatsappUrl = $this->crearEnlaceWhatsapp($this->adminWhatsapp, $mensajeWhatsapp);
+    }
 
     return [
       'exito' => true,
       'cita_id' => $citaId,
       'codigo_cita' => $codigoCita,
       'estado' => $cita->getEstado()->value,
+      'medio_contacto' => $medioContacto,
+      'telefono_admin' => $this->adminWhatsapp,
       'cliente' => [
         'id' => $cliente->getId(),
-        'nombre' => $cliente->getNombreCompleto()
+        'nombre' => $cliente->getNombreCompleto(),
+        'telefono' => $telefono
       ],
       'servicio' => [
         'id' => $servicio->getId(),
@@ -294,7 +319,7 @@ class AgendaService
     string $codigoCita,
     ?string $notas = null
   ): string {
-    $msg = "🌿 *Solicitud de Cita - Casa Nei*\n\n";
+    $msg = "*Solicitud de Cita - Casa Nei*\n\n";
     $msg .= "• *Código:* {$codigoCita}\n";
     $msg .= "• *Paciente:* {$nombre}\n";
     $msg .= "• *Teléfono:* {$telefono}\n";
@@ -317,7 +342,7 @@ class AgendaService
     string $codigoCita,
     ?string $mensajeExtra = null
   ): string {
-    $msg = "🌿 *¡Tu cita en Casa Nei ha sido Confirmada!*\n\n";
+    $msg = "*¡Tu cita en Casa Nei ha sido Confirmada!*\n\n";
     $msg .= "Hola *{$nombre}*, te esperamos con gusto:\n\n";
     $msg .= "• *Código:* {$codigoCita}\n";
     $msg .= "• *Servicio:* {$servicioNombre}\n";
@@ -325,7 +350,7 @@ class AgendaService
     $msg .= "• *Hora:* {$horaInicio} hrs\n";
 
     if ($mensajeExtra !== null && trim($mensajeExtra) !== '') {
-      $msg .= "\n📝 *Indicaciones:* {$mensajeExtra}\n";
+      $msg .= "\n• *Indicaciones:* {$mensajeExtra}\n";
     }
 
     $msg .= "\nSi necesitas cualquier cambio, por favor avísanos con anticipación.";

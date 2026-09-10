@@ -24,7 +24,7 @@ class ServicioRepository
    */
   public function obtenerActivos(): array
   {
-    $sql = "SELECT id, nombre, descripcion, duracion_minutos, precio, activo, created_at 
+    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
             FROM servicios 
             WHERE activo = 1 
             ORDER BY id ASC";
@@ -38,7 +38,7 @@ class ServicioRepository
    */
   public function buscarPorId(int $id): ?Servicio
   {
-    $sql = "SELECT id, nombre, descripcion, duracion_minutos, precio, activo, created_at 
+    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
             FROM servicios 
             WHERE id = ? 
             LIMIT 1";
@@ -52,12 +52,13 @@ class ServicioRepository
    */
   public function crear(Servicio $servicio): int
   {
-    $sql = "INSERT INTO servicios (nombre, descripcion, duracion_minutos, precio, activo) 
-            VALUES (?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO servicios (nombre, descripcion, instrucciones, duracion_minutos, precio, activo) 
+            VALUES (?, ?, ?, ?, ?, ?)";
 
     $this->db->execute($sql, [
       $servicio->getNombre(),
       $servicio->getDescripcion(),
+      $servicio->getInstrucciones(),
       $servicio->getDuracionMinutos(),
       $servicio->getPrecio(),
       $servicio->isActivo() ? 1 : 0
@@ -74,12 +75,13 @@ class ServicioRepository
   public function actualizar(Servicio $servicio): bool
   {
     $sql = "UPDATE servicios 
-            SET nombre = ?, descripcion = ?, duracion_minutos = ?, precio = ?, activo = ? 
+            SET nombre = ?, descripcion = ?, instrucciones = ?, duracion_minutos = ?, precio = ?, activo = ? 
             WHERE id = ?";
 
     return $this->db->execute($sql, [
       $servicio->getNombre(),
       $servicio->getDescripcion(),
+      $servicio->getInstrucciones(),
       $servicio->getDuracionMinutos(),
       $servicio->getPrecio(),
       $servicio->isActivo() ? 1 : 0,
