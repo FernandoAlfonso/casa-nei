@@ -121,18 +121,24 @@ export class AgendaApi {
   }
 
   /**
-   * Obtiene la disponibilidad del calendario de los próximos días.
+   * Obtiene la disponibilidad del calendario de los próximos días disponibles.
    * @param {number} servicioId - ID del servicio seleccionado.
-   * @param {number} [semanas=4] - Semanas a proyectar.
+   * @param {number} [cantidadDias=12] - Cantidad de días netos disponibles (por defecto 12, 2 semanas completas Lun-Sáb).
+   * @param {string|null} [fechaDesde=null] - Fecha inicial en formato YYYY-MM-DD.
    * @returns {Promise<DiaCalendario[]>}
    */
-  async obtenerCalendario(servicioId, semanas = 4) {
+  async obtenerCalendario(servicioId, cantidadDias = 12, fechaDesde = null) {
     const params = new URLSearchParams({
       servicio_id: String(servicioId),
-      semanas: String(semanas)
+      cantidad_dias: String(cantidadDias),
+      solo_disponibles: '1'
     });
+    if (fechaDesde) {
+      params.append('fecha_desde', fechaDesde);
+    }
     return this._request(`/calendario?${params.toString()}`);
   }
+
 
   /**
    * Obtiene los horarios específicos disponibles para un día y servicio.

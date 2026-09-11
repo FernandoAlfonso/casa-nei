@@ -91,7 +91,8 @@ export class AgendaApp {
         stepContentHtml = renderCalendarView(
           state.servicioSeleccionado,
           state.calendario,
-          state.fechaSeleccionada
+          state.fechaSeleccionada,
+          state.cargandoMasDias
         );
         break;
 
@@ -158,7 +159,8 @@ export class AgendaApp {
         attachCalendarListeners(
           this.container,
           (fecha) => this.handleSelectFecha(fecha),
-          () => this.store.setStep(1)
+          () => this.store.setStep(1),
+          () => this.handleCargarSiguientesDias()
         );
         break;
 
@@ -191,7 +193,7 @@ export class AgendaApp {
   // --- MANEJADORES DE ACCIONES Y FLUJO ---
 
   /**
-   * Maneja la selección de un servicio y descarga el calendario de disponibilidad.
+   * Maneja la selección de un servicio y descarga los primeros 12 días disponibles garantizados.
    * @param {import('./api.js').Servicio} servicio
    */
   async handleSelectServicio(servicio) {
@@ -199,13 +201,59 @@ export class AgendaApp {
     this.renderLoading('Consultando disponibilidad en el calendario...');
 
     try {
-      const calendario = await this.api.obtenerCalendario(servicio.id, 4);
+      const calendario = await this.api.obtenerCalendario(servicio.id, 12);
       this.store.setCalendario(calendario);
     } catch (err) {
       console.error('[AgendaApp] Error al obtener calendario:', err);
       this.store.setError(err.message || 'Error al conectar con el calendario.');
     }
   }
+
+  /**
+   * Consulta y anexa el siguiente bloque de 12 días disponibles garantizados a partir de la última fecha cargada.
+   */
+  async handleCargarSiguientesDias() {
+    const state = this.store.getState();
+    if (state.cargandoMasDias || !state.servicioSeleccionado) return;
+
+    // Obtener la última fecha de los días disponibles ya presentes en el estado
+    const diasActuales = (state.calendario || []).filter(
+      (dia) => dia.estado === 'disponible' && dia.slots_libres > 0
+    );
+
+    let fechaBase = null;
+    if (diasActuales.length > 0) {
+      const ultimaFechaStr = diasActuales[diasActuales.length - 1].fecha;
+      const parts = ultimaFechaStr.split('-').map(Number);
+      if (parts.length === 3) {
+        const nextDateObj = new Date(parts[0], parts[1] - 1, parts[2] + 1, 12, 0, 0);
+        const nextY = nextDateObj.getFullYear();
+        const nextM = String(nextDateObj.getMonth() + 1).padStart(2, '0');
+        const nextD = String(nextDateObj.getDate()).padStart(2, '0');
+        fechaBase = `${nextY}-${nextM}-${nextD}`;
+      }
+    }
+
+    this.store.setCargandoMasDias(true);
+
+    try {
+      const nuevosDias = await this.api.obtenerCalendario(
+        state.servicioSeleccionado.id,
+        12,
+        fechaBase
+      );
+
+      if (nuevosDias && nuevosDias.length > 0) {
+        this.store.appendCalendario(nuevosDias);
+      } else {
+        this.store.setCargandoMasDias(false);
+      }
+    } catch (err) {
+      console.error('[AgendaApp] Error al cargar siguientes días:', err);
+      this.store.setCargandoMasDias(false);
+    }
+  }
+
 
   /**
    * Maneja la selección de una fecha y descarga las horas disponibles (Paso 3).

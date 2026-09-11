@@ -17,6 +17,7 @@
  * @property {import('./api.js').CitaResponse|null} citaExitosa - Datos de la cita confirmada
  * @property {boolean} loading - Bandera de carga general
  * @property {string} loadingMessage - Mensaje explicativo del estado de carga
+ * @property {boolean} cargandoMasDias - Bandera indicando si se están cargando más días al calendario
  * @property {string|null} error - Mensaje de error actual o null
  */
 
@@ -35,8 +36,10 @@ export class AgendaStore {
       citaExitosa: null,
       loading: false,
       loadingMessage: '',
+      cargandoMasDias: false,
       error: null
     };
+
 
     /** @type {Set<Function>} */
     this._subscribers = new Set();
@@ -114,6 +117,33 @@ export class AgendaStore {
    */
   setCalendario(calendario) {
     this._state.calendario = calendario || [];
+    this._state.cargandoMasDias = false;
+    this._notify();
+  }
+
+  /**
+   * Anexa nuevos días disponibles al calendario existente evitando duplicados de fecha.
+   * @param {import('./api.js').DiaCalendario[]} nuevosDias
+   */
+  appendCalendario(nuevosDias) {
+    if (!Array.isArray(nuevosDias) || nuevosDias.length === 0) {
+      this._state.cargandoMasDias = false;
+      this._notify();
+      return;
+    }
+    const fechasExistentes = new Set(this._state.calendario.map((d) => d.fecha));
+    const filtrados = nuevosDias.filter((d) => !fechasExistentes.has(d.fecha));
+    this._state.calendario = [...this._state.calendario, ...filtrados];
+    this._state.cargandoMasDias = false;
+    this._notify();
+  }
+
+  /**
+   * Actualiza la bandera de carga de días adicionales.
+   * @param {boolean} loading
+   */
+  setCargandoMasDias(loading) {
+    this._state.cargandoMasDias = !!loading;
     this._notify();
   }
 
@@ -204,6 +234,7 @@ export class AgendaStore {
     this._state.citaExitosa = null;
     this._state.error = null;
     this._state.loading = false;
+    this._state.cargandoMasDias = false;
     this._notify();
   }
 }

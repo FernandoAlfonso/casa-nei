@@ -105,3 +105,28 @@ export function formatDateAccessible(dateStr) {
 
   return `${diaSemana} ${diaMes} de ${mes}`;
 }
+
+/**
+ * Formatea una hora en formato HH:MM o HH:MM:SS al formato compacto natural AM/PM (ej. "5pm", "1am", "9am", "5:30pm").
+ * Omite los minutos si es hora en punto (:00) y los conserva si existen fracciones de hora.
+ * 
+ * @param {string} timeStr - Hora en formato "HH:MM" o "HH:MM:SS".
+ * @returns {string} Hora formateada en minúsculas y sin espacio (ej. "5pm", "1am", "5:30pm").
+ */
+export function formatTimeAmPm(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return '';
+  const parts = timeStr.trim().split(':');
+  if (parts.length < 2) return timeStr;
+
+  let hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+
+  if (isNaN(hours) || isNaN(minutes)) return timeStr;
+
+  const suffix = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+
+  const minStr = minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : '';
+  return `${hours}${minStr}${suffix}`;
+}

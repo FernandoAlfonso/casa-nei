@@ -664,12 +664,69 @@ section {
 .badge.ocupado { background: #ef4444; }
 .badge.cerrado { background: #9ca3af; }
 
+.agenda-legend-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin-bottom: 1.5rem;
+}
+
+.agenda-legend-notice i {
+  color: var(--primary-color);
+  font-size: 1rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.agenda-more-days-container {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0 2rem 0;
+}
+
+.btn-cargar-mas-semanas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  background: transparent;
+  min-height: 46px;
+}
+
+.btn-cargar-mas-semanas:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.btn-cargar-mas-semanas:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .agenda-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
+
 
 .agenda-calendar-day {
   font-family: inherit;
@@ -1317,13 +1374,14 @@ section {
 /* Responsive Agenda */
 @media (max-width: 850px) {
   .agenda-calendar-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .agenda-form-layout {
     grid-template-columns: 1fr;
   }
 }
+
 
 @media (max-width: 550px) {
   .agenda-container-card {

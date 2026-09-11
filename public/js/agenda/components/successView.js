@@ -4,7 +4,7 @@
  */
 
 import { escapeHtml, isSafeWhatsAppUrl } from '../utils/sanitizer.js';
-import { formatDateLegible } from '../utils/date.js';
+import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
 
 /**
  * Renderiza la pantalla de confirmación exitosa con enlace a WhatsApp o llamada telefónica.
@@ -15,7 +15,7 @@ export function renderSuccessView(data) {
   const codigo = escapeHtml(data.codigo_cita || '');
   const servicioNombre = escapeHtml(data.servicio?.nombre || 'Consulta');
   const fechaTexto = formatDateLegible(data.fecha_cita);
-  const horaTexto = escapeHtml(data.hora_inicio || '');
+  const horaTexto = formatTimeAmPm(data.hora_inicio || '');
   const esLlamada = data.medio_contacto === 'llamada' || !data.whatsapp_url;
   const safeUrl = isSafeWhatsAppUrl(data.whatsapp_url) ? data.whatsapp_url : '#';
 
@@ -31,7 +31,7 @@ export function renderSuccessView(data) {
 
         <p class="success-desc">
           Tu solicitud para <strong>${servicioNombre}</strong> el día 
-          <strong>${fechaTexto}</strong> a las <strong>${horaTexto} hrs</strong> 
+          <strong>${fechaTexto}</strong> a las <strong>${horaTexto}</strong> 
           ha sido registrada en el sistema.
         </p>
 
@@ -74,7 +74,7 @@ export function renderSuccessView(data) {
 
       <p class="success-desc">
         Tu solicitud para <strong>${servicioNombre}</strong> el día 
-        <strong>${fechaTexto}</strong> a las <strong>${horaTexto} hrs</strong> 
+        <strong>${fechaTexto}</strong> a las <strong>${horaTexto}</strong> 
         ha sido registrada y está <em>Pendiente de confirmación</em> por el administrador.
       </p>
 

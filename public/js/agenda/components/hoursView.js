@@ -4,7 +4,7 @@
  */
 
 import { escapeHtml } from '../utils/sanitizer.js';
-import { formatDateLegible } from '../utils/date.js';
+import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
 
 /**
  * Renderiza la vista de selección de horarios para una fecha y servicio seleccionados.
@@ -63,6 +63,9 @@ export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loadin
 
     horas.forEach((h) => {
       const isSelected = horaSeleccionada && horaSeleccionada.hora_inicio === h.hora_inicio;
+      const horaInicioAmPm = formatTimeAmPm(h.hora_inicio);
+      const horaFinAmPm = formatTimeAmPm(h.hora_fin);
+
       html += `
         <button type="button" 
                 class="btn-slot-hora ${isSelected ? 'selected' : ''}" 
@@ -71,8 +74,8 @@ export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loadin
                 data-inicio-completo="${h.hora_inicio_completa}"
                 data-fin-completo="${h.hora_fin_completa}"
                 aria-pressed="${isSelected ? 'true' : 'false'}"
-                aria-label="Cita de ${h.hora_inicio} a ${h.hora_fin} hrs">
-          <i class="far fa-clock" aria-hidden="true"></i> ${h.hora_inicio} - ${h.hora_fin} hrs
+                aria-label="Cita de ${horaInicioAmPm} a ${horaFinAmPm}">
+          <i class="far fa-clock" aria-hidden="true"></i> ${horaInicioAmPm} - ${horaFinAmPm}
         </button>
       `;
     });
@@ -81,6 +84,7 @@ export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loadin
       </div>
     `;
   }
+
 
   html += `
     </div>

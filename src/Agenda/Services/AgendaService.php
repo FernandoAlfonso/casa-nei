@@ -290,7 +290,8 @@ class AgendaService
     $cliente = $this->clienteRepo->buscarPorId($cita->getClienteId());
     $telefonoCliente = $this->clienteRepo->descifrarTelefono($cliente);
 
-    $mensajeActualizacion = "Hola {$cliente->getNombreCompleto()}, tu cita con código *{$cita->getCodigoCita()}* ha sido reprogramada para el día *{$nuevaFecha}* a las *{$inicioObj->format('H:i')} hrs*.";
+    $horaReprog = self::formatearHoraAmPm($inicioObj->format('H:i'));
+    $mensajeActualizacion = "Hola {$cliente->getNombreCompleto()}, tu cita con código *{$cita->getCodigoCita()}* ha sido reprogramada para el día *{$nuevaFecha}* a las *{$horaReprog}*.";
     if ($motivo !== null && trim($motivo) !== '') {
       $mensajeActualizacion .= "\n\n*Nota:* {$motivo}";
     }
@@ -302,12 +303,38 @@ class AgendaService
       'cita_id' => $citaId,
       'fecha_cita' => $nuevaFecha,
       'hora_inicio' => $inicioObj->format('H:i'),
+      'hora_inicio_formato' => self::formatearHoraAmPm($inicioObj->format('H:i')),
       'mensaje_whatsapp' => $mensajeActualizacion,
       'whatsapp_url' => $whatsappUrl
     ];
   }
 
   // --- Generadores de Mensajes y URLs de WhatsApp ---
+
+  /**
+   * Formatea una hora en formato HH:MM o HH:MM:SS a formato compacto am/pm (ej. 5pm, 1am, 9:30am).
+   *
+   * @param string $hora Hora en formato 'HH:MM' o 'HH:MM:SS'.
+   * @return string Hora formateada am/pm en minúsculas y sin espacio.
+   */
+  public static function formatearHoraAmPm(string $hora): string
+  {
+    $horaTrim = trim($hora);
+    if ($horaTrim === '') {
+      return '';
+    }
+
+    $dt = \DateTime::createFromFormat('H:i:s', $horaTrim) ?: \DateTime::createFromFormat('H:i', $horaTrim);
+    if (!$dt) {
+      return $hora;
+    }
+
+    $h = (int) $dt->format('g');
+    $m = (int) $dt->format('i');
+    $ampm = strtolower($dt->format('a'));
+
+    return $m === 0 ? "{$h}{$ampm}" : "{$h}:" . $dt->format('i') . $ampm;
+  }
 
   private function generarMensajeSolicitudAdmin(
     string $nombre,
@@ -319,13 +346,15 @@ class AgendaService
     string $codigoCita,
     ?string $notas = null
   ): string {
+    $horarioFormato = self::formatearHoraAmPm($horaInicio) . ' - ' . self::formatearHoraAmPm($horaFin);
+
     $msg = "*Solicitud de Cita - Casa Nei*\n\n";
     $msg .= "• *Código:* {$codigoCita}\n";
     $msg .= "• *Paciente:* {$nombre}\n";
     $msg .= "• *Teléfono:* {$telefono}\n";
     $msg .= "• *Servicio:* {$servicioNombre}\n";
     $msg .= "• *Fecha:* {$fecha}\n";
-    $msg .= "• *Horario:* {$horaInicio} - {$horaFin}\n";
+    $msg .= "• *Horario:* {$horarioFormato}\n";
 
     if ($notas !== null && trim($notas) !== '') {
       $msg .= "• *Notas:* {$notas}\n";
@@ -342,12 +371,14 @@ class AgendaService
     string $codigoCita,
     ?string $mensajeExtra = null
   ): string {
+    $horaFormato = self::formatearHoraAmPm($horaInicio);
+
     $msg = "*¡Tu cita en Casa Nei ha sido Confirmada!*\n\n";
     $msg .= "Hola *{$nombre}*, te esperamos con gusto:\n\n";
     $msg .= "• *Código:* {$codigoCita}\n";
     $msg .= "• *Servicio:* {$servicioNombre}\n";
     $msg .= "• *Fecha:* {$fecha}\n";
-    $msg .= "• *Hora:* {$horaInicio} hrs\n";
+    $msg .= "• *Hora:* {$horaFormato}\n";
 
     if ($mensajeExtra !== null && trim($mensajeExtra) !== '') {
       $msg .= "\n• *Indicaciones:* {$mensajeExtra}\n";
@@ -364,3 +395,4 @@ class AgendaService
     return "https://wa.me/{$telefonoLimpio}?text={$textoEncoded}";
   }
 }
+

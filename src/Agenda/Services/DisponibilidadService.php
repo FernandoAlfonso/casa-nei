@@ -26,15 +26,22 @@ class DisponibilidadService
    * Obtiene la disponibilidad del calendario para las próximas N semanas a partir de una fecha.
    *
    * @param string|null $fechaDesde Fecha inicial en formato YYYY-MM-DD (por defecto hoy)
-   * @param int $semanasAdelante Número de semanas hacia el futuro (por defecto 4)
+   * @param int $semanasAdelante Número de semanas hacia el futuro (por defecto 2)
    * @param int|null $servicioId ID del servicio para calcular duración (opcional)
-   * @return array Resumen de días con su estado ('disponible', 'ocupado', 'bloqueado', 'cerrado', 'tiene_pendientes')
+   * @param bool $soloDisponibles Si es true, retorna solo días con disponibilidad garantizada
+   * @return array Resumen de días con su estado
    */
   public function obtenerCalendario(
     ?string $fechaDesde = null,
-    int $semanasAdelante = 4,
-    ?int $servicioId = null
+    int $semanasAdelante = 2,
+    ?int $servicioId = null,
+    bool $soloDisponibles = false
   ): array {
+    if ($soloDisponibles) {
+      $diasObjetivo = $semanasAdelante * 6; // 6 días laborables por semana (Lunes a Sábado) = 12 días para 2 semanas
+      return $this->obtenerDiasDisponibles($fechaDesde, $diasObjetivo, $servicioId);
+    }
+
     $inicio = new DateTime($fechaDesde ?? 'today');
     $diasTotales = $semanasAdelante * 7;
     $fin = (clone $inicio)->modify("+{$diasTotales} days");
@@ -149,6 +156,142 @@ class DisponibilidadService
 
     return $calendario;
   }
+
+  /**
+   * Obtiene una lista garantizada de N días netos disponibles a partir de una fecha inicial.
+   * Recorre dinámicamente el calendario hacia el futuro saltando domingos (cerrados), bloqueos
+   * festivos y días ocupados hasta completar exactamente la cantidad solicitada (ej. 12 días = 2 semanas completas de Lun a Sáb).
+   *
+   * @param string|null $fechaDesde Fecha inicial en formato YYYY-MM-DD (por defecto hoy)
+   * @param int $cantidadDias Cantidad garantizada de días disponibles a retornar (por defecto 12)
+   * @param int|null $servicioId ID del servicio para calcular duración y slots
+   * @return array Lista indexada con los N días disponibles encontrados
+   */
+  public function obtenerDiasDisponibles(
+    ?string $fechaDesde = null,
+    int $cantidadDias = 12,
+    ?int $servicioId = null
+  ): array {
+    $inicio = new DateTime($fechaDesde ?? 'today');
+
+    // Duración base del servicio
+    $duracionMinutos = 60;
+    if ($servicioId !== null) {
+      $servicio = $this->servicioRepo->buscarPorId($servicioId);
+      if ($servicio) {
+        $duracionMinutos = $servicio->getDuracionMinutos();
+      }
+    }
+
+    // Cargar horarios semanales configurados (Lunes a Sábado)
+    $horariosSemanales = [];
+    foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
+      $horariosSemanales[$h->getDiaSemana()] = $h;
+    }
+
+    $diasEncontrados = [];
+    $cursor = clone $inicio;
+
+    // Límite de seguridad de 180 días hacia el futuro para prevenir bucles si hubiera un cierre extraordinario prolongado
+    $limiteMaximo = (clone $inicio)->modify('+180 days');
+
+    // Consultamos en bloques de 30 días para evitar consultas SQL día a día (evita latencia de red N+1)
+    $bloqueDias = 30;
+
+    while (count($diasEncontrados) < $cantidadDias && $cursor < $limiteMaximo) {
+      $finBloque = (clone $cursor)->modify("+{$bloqueDias} days");
+      if ($finBloque > $limiteMaximo) {
+        $finBloque = clone $limiteMaximo;
+      }
+
+      $fechaInicioStr = $cursor->format('Y-m-d');
+      $fechaFinStr = $finBloque->format('Y-m-d');
+
+      // Consultar bloqueos y citas en el rango del bloque
+      $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
+      $bloqueosPorFecha = [];
+      foreach ($bloqueos as $b) {
+        $bloqueosPorFecha[$b->getFecha()][] = $b;
+      }
+
+      $citas = $this->citaRepo->obtenerPorRangoFechas($fechaInicioStr, $fechaFinStr, [
+        EstadoCita::PENDIENTE->value,
+        EstadoCita::CONFIRMADA->value
+      ]);
+      $citasPorFecha = [];
+      foreach ($citas as $c) {
+        $citasPorFecha[$c->getFechaCita()][] = $c;
+      }
+
+      $periodo = new DatePeriod($cursor, new DateInterval('P1D'), (clone $finBloque)->modify('+1 day'));
+
+      foreach ($periodo as $fechaObj) {
+        $fechaStr = $fechaObj->format('Y-m-d');
+        $diaSemana = (int) $fechaObj->format('w'); // 0=Domingo, 1=Lunes, ..., 6=Sábado
+
+        // 1. Omitir si el negocio no abre ese día de la semana (ej. domingos)
+        if (!isset($horariosSemanales[$diaSemana])) {
+          continue;
+        }
+
+        $horarioDia = $horariosSemanales[$diaSemana];
+
+        // 2. Omitir si hay un bloqueo de día completo (ej. festivos, vacaciones)
+        $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
+        $bloqueoCompleto = false;
+        foreach ($bloqueosDia as $b) {
+          if ($b->esDiaCompleto()) {
+            $bloqueoCompleto = true;
+            break;
+          }
+        }
+        if ($bloqueoCompleto) {
+          continue;
+        }
+
+        // 3. Generar slots de horarios disponibles para este día
+        $slots = $this->generarSlotsDisponibles(
+          $fechaStr,
+          $horarioDia->getHoraInicio(),
+          $horarioDia->getHoraFin(),
+          $duracionMinutos,
+          $bloqueosDia,
+          $citasPorFecha[$fechaStr] ?? []
+        );
+
+        // Si tiene al menos 1 horario libre, lo agregamos como día disponible garantizado
+        if (count($slots) > 0) {
+          $citasDia = $citasPorFecha[$fechaStr] ?? [];
+          $tienePendientes = false;
+          foreach ($citasDia as $c) {
+            if ($c->estaPendiente()) {
+              $tienePendientes = true;
+              break;
+            }
+          }
+
+          $diasEncontrados[] = [
+            'fecha' => $fechaStr,
+            'dia_semana' => $diaSemana,
+            'estado' => 'disponible',
+            'motivo' => null,
+            'slots_libres' => count($slots),
+            'tiene_pendientes' => $tienePendientes
+          ];
+
+          if (count($diasEncontrados) >= $cantidadDias) {
+            break 2; // Salir de ambos bucles al completar la cuota de días
+          }
+        }
+      }
+
+      // Avanzar el cursor al día posterior del bloque actual
+      $cursor = (clone $finBloque)->modify('+1 day');
+    }
+
+    return $diasEncontrados;
+  }
+
 
   /**
    * Obtiene la lista de horarios específicos disponibles para un día dado y servicio.

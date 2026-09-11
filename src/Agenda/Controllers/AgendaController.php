@@ -39,22 +39,41 @@ class AgendaController
   }
 
   /**
-   * GET /api/calendario?fecha_desde=YYYY-MM-DD&servicio_id=1&semanas=4
-   * Retorna el estado de disponibilidad día por día para las próximas semanas.
+   * GET /api/calendario?fecha_desde=YYYY-MM-DD&servicio_id=1&cantidad_dias=12&solo_disponibles=1
+   * Retorna el conjunto garantizado de días disponibles para la agenda del usuario (o el calendario completo para admin).
    */
   public function obtenerCalendario(Request $request): void
   {
     try {
       $fechaDesde = $request->getQuery('fecha_desde');
-      $semanas = (int) $request->getQuery('semanas', 4);
       $servicioId = $request->getQuery('servicio_id') ? (int) $request->getQuery('servicio_id') : null;
+      
+      // Determinar la cantidad de días solicitada (por defecto 12, equivalentes a 2 semanas completas de Lun a Sáb)
+      if ($request->getQuery('cantidad_dias') !== null) {
+        $cantidadDias = max(1, (int) $request->getQuery('cantidad_dias'));
+      } elseif ($request->getQuery('semanas') !== null) {
+        $cantidadDias = max(1, (int) $request->getQuery('semanas') * 6);
+      } else {
+        $cantidadDias = 12;
+      }
 
-      $calendario = $this->disponibilidadService->obtenerCalendario($fechaDesde, $semanas, $servicioId);
-      Response::success(array_values($calendario), "Calendario generado con éxito");
+      // Por defecto para el flujo público de usuario solo_disponibles es true
+      $soloDisponiblesParam = $request->getQuery('solo_disponibles');
+      $soloDisponibles = $soloDisponiblesParam === null || $soloDisponiblesParam === '1' || $soloDisponiblesParam === 'true';
+
+      if ($soloDisponibles) {
+        $calendario = $this->disponibilidadService->obtenerDiasDisponibles($fechaDesde, $cantidadDias, $servicioId);
+      } else {
+        $semanas = (int) ceil($cantidadDias / 6);
+        $calendario = array_values($this->disponibilidadService->obtenerCalendario($fechaDesde, $semanas, $servicioId, false));
+      }
+
+      Response::success($calendario, "Calendario generado con éxito");
     } catch (Exception $e) {
       Response::error("Error al calcular el calendario: " . $e->getMessage(), 500);
     }
   }
+
 
   /**
    * GET /api/horas-disponibles?fecha=YYYY-MM-DD&servicio_id=1

@@ -4,7 +4,7 @@
  */
 
 import { escapeHtml, sanitizePhone, isValidMexicanPhone } from '../utils/sanitizer.js';
-import { formatDateLegible } from '../utils/date.js';
+import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
 
 /**
  * Renderiza el formulario y resumen de la cita.
@@ -34,6 +34,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
   const clienteNombre = cliente ? escapeHtml(cliente.nombre_completo) : '';
   const clienteTelefono = cliente ? escapeHtml(cliente.telefono) : '';
   const tieneInstrucciones = Boolean(servicio.instrucciones && String(servicio.instrucciones).trim() !== '');
+  const horarioAmPm = `${formatTimeAmPm(hora.hora_inicio)} a ${formatTimeAmPm(hora.hora_fin)}`;
 
   let html = `
     <div class="agenda-step-content animate-fade-in">
@@ -57,7 +58,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
           </div>
           <div class="summary-row">
             <span>Horario:</span>
-            <strong>${hora.hora_inicio} a ${hora.hora_fin} hrs</strong>
+            <strong>${horarioAmPm}</strong>
           </div>
           <div class="summary-row total">
             <span>Precio estimado:</span>
