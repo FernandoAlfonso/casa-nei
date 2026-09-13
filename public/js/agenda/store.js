@@ -182,11 +182,15 @@ export class AgendaStore {
 
   /**
    * Establece los datos del cliente reconocido por su teléfono.
+   * Por defecto no notifica para no re-renderizar todo el DOM del formulario y destruir la entrada del usuario.
    * @param {import('./api.js').Cliente|null} cliente
+   * @param {boolean} [notify=false] - Si es true, notifica a los suscriptores para re-renderizado general.
    */
-  setCliente(cliente) {
+  setCliente(cliente, notify = false) {
     this._state.cliente = cliente;
-    this._notify();
+    if (notify) {
+      this._notify();
+    }
   }
 
   /**

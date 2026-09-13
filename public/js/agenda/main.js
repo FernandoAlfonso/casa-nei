@@ -316,18 +316,80 @@ export class AgendaApp {
 
   /**
    * Consulta si el teléfono ya está registrado para precargar los datos del cliente.
-   * @param {string} telefono - 10 dígitos limpios
+   * Muestra un loader visual explícito y temporalmente mantiene el campo de nombre en espera
+   * para evitar que el usuario comience a escribir y sus datos se sobreescriban de repente.
+   * @param {string} telefono - 10 dígitos limpios o cadena vacía para resetear
    */
   async handlePhoneLookup(telefono) {
+    const lookupBox = this.container.querySelector('#cliente-lookup-box');
     const infoBox = this.container.querySelector('#cliente-reconocido-box');
     const inputNombre = this.container.querySelector('#paciente_nombre');
+    const phoneSpinner = this.container.querySelector('#telefono-spinner');
+    const nameSpinner = this.container.querySelector('#nombre-spinner');
+
+    // Si se envía cadena vacía (el usuario borró dígitos), restaurar estado normal
+    if (!telefono || telefono.length < 10) {
+      if (lookupBox) {
+        lookupBox.style.display = 'none';
+        lookupBox.innerHTML = '';
+      }
+      if (infoBox) infoBox.style.display = 'none';
+      if (phoneSpinner) phoneSpinner.style.display = 'none';
+      if (nameSpinner) nameSpinner.style.display = 'none';
+      if (inputNombre) {
+        inputNombre.readOnly = false;
+        inputNombre.classList.remove('field-searching');
+        inputNombre.placeholder = 'Nombre y Apellidos';
+      }
+      this.store.setCliente(null);
+      return;
+    }
+
+    // Activar estado visible de búsqueda
+    if (phoneSpinner) phoneSpinner.style.display = 'inline-block';
+    if (lookupBox) {
+      lookupBox.innerHTML = `
+        <div class="cliente-lookup-loading" role="status" aria-live="polite">
+          <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+          <div class="lookup-text">
+            <strong>Buscando si ya estás registrado...</strong>
+            <small>Consultando tus datos para precargarlos automáticamente.</small>
+          </div>
+        </div>
+      `;
+      lookupBox.style.display = 'block';
+    }
+    if (infoBox) infoBox.style.display = 'none';
+
+    // Si el campo de nombre está vacío o no ha sido modificado, indicar que se está buscando
+    const nombreActual = inputNombre ? inputNombre.value.trim() : '';
+    if (inputNombre && !nombreActual) {
+      inputNombre.readOnly = true;
+      inputNombre.classList.add('field-searching');
+      inputNombre.placeholder = 'Buscando si ya estás registrado...';
+      if (nameSpinner) nameSpinner.style.display = 'inline-block';
+    }
 
     try {
       const cliente = await this.api.consultarCliente(telefono);
+
+      // Ocultar spinners
+      if (phoneSpinner) phoneSpinner.style.display = 'none';
+      if (nameSpinner) nameSpinner.style.display = 'none';
+
       if (cliente) {
         this.store.setCliente(cliente);
-        if (inputNombre && !inputNombre.value) {
+        if (lookupBox) {
+          lookupBox.style.display = 'none';
+          lookupBox.innerHTML = '';
+        }
+        if (inputNombre) {
+          inputNombre.readOnly = false;
+          inputNombre.classList.remove('field-searching');
+          inputNombre.placeholder = 'Nombre y Apellidos';
           inputNombre.value = cliente.nombre_completo;
+          inputNombre.classList.add('field-prefilled');
+          setTimeout(() => inputNombre.classList.remove('field-prefilled'), 2000);
         }
         if (infoBox) {
           infoBox.innerHTML = `
@@ -339,9 +401,43 @@ export class AgendaApp {
       } else {
         this.store.setCliente(null);
         if (infoBox) infoBox.style.display = 'none';
+        if (inputNombre) {
+          inputNombre.readOnly = false;
+          inputNombre.classList.remove('field-searching');
+          inputNombre.placeholder = 'Nombre y Apellidos';
+          if (!inputNombre.value) {
+            inputNombre.focus();
+          }
+        }
+        if (lookupBox) {
+          lookupBox.innerHTML = `
+            <div class="cliente-lookup-notfound" role="status">
+              <i class="fas fa-user-plus" aria-hidden="true"></i>
+              <span>No encontramos registros previos con este número. Por favor ingresa tu nombre completo.</span>
+            </div>
+          `;
+          lookupBox.style.display = 'block';
+          setTimeout(() => {
+            if (lookupBox && lookupBox.querySelector('.cliente-lookup-notfound')) {
+              lookupBox.style.display = 'none';
+              lookupBox.innerHTML = '';
+            }
+          }, 4500);
+        }
       }
     } catch (err) {
       console.warn('[AgendaApp] Consulta de cliente omitida:', err.message);
+      if (phoneSpinner) phoneSpinner.style.display = 'none';
+      if (nameSpinner) nameSpinner.style.display = 'none';
+      if (lookupBox) {
+        lookupBox.style.display = 'none';
+        lookupBox.innerHTML = '';
+      }
+      if (inputNombre) {
+        inputNombre.readOnly = false;
+        inputNombre.classList.remove('field-searching');
+        inputNombre.placeholder = 'Nombre y Apellidos';
+      }
     }
   }
 

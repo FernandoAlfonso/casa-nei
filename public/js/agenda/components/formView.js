@@ -133,19 +133,31 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
               <label for="paciente_telefono" id="label-telefono">
                 <i class="fas fa-mobile-alt" aria-hidden="true"></i> Número de Celular <span class="req" aria-hidden="true">*</span>
               </label>
-              <input type="tel" 
-                     id="paciente_telefono" 
-                     name="telefono" 
-                     value="${clienteTelefono}"
-                     placeholder="Ej. 312 123 4567 (10 dígitos)" 
-                     maxlength="15" 
-                     required 
-                     autocomplete="tel"
-                     aria-describedby="telefono-hint">
+              <div class="input-relative-wrapper">
+                <input type="tel" 
+                       id="paciente_telefono" 
+                       name="telefono" 
+                       value="${clienteTelefono}"
+                       placeholder="Ej. 312 123 4567 (10 dígitos)" 
+                       maxlength="15" 
+                       required 
+                       autocomplete="tel"
+                       aria-describedby="telefono-hint">
+                <span id="telefono-spinner" class="input-inline-spinner" style="display: none;" aria-hidden="true">
+                  <i class="fas fa-circle-notch fa-spin"></i>
+                </span>
+              </div>
               <small id="telefono-hint" class="form-hint">
                 Se usará para autocompletar tus datos si ya eres paciente y coordinar tu cita.
               </small>
             </div>
+
+            <!-- Contenedor del loader de búsqueda de cliente -->
+            <div id="cliente-lookup-box" 
+                 class="cliente-lookup-box" 
+                 style="display: none;" 
+                 role="status" 
+                 aria-live="polite"></div>
 
             <!-- Notificación de reconocimiento de cliente recurrente -->
             <div id="cliente-reconocido-box" 
@@ -161,13 +173,18 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
               <label for="paciente_nombre">
                 <i class="fas fa-user" aria-hidden="true"></i> Nombre completo <span class="req" aria-hidden="true">*</span>
               </label>
-              <input type="text" 
-                     id="paciente_nombre" 
-                     name="nombre" 
-                     value="${clienteNombre}"
-                     placeholder="Nombre y Apellidos" 
-                     required 
-                     autocomplete="name">
+              <div class="input-relative-wrapper">
+                <input type="text" 
+                       id="paciente_nombre" 
+                       name="nombre" 
+                       value="${clienteNombre}"
+                       placeholder="Nombre y Apellidos" 
+                       required 
+                       autocomplete="name">
+                <span id="nombre-spinner" class="input-inline-spinner" style="display: none;" aria-hidden="true">
+                  <i class="fas fa-circle-notch fa-spin"></i>
+                </span>
+              </div>
             </div>
 
             <!-- Campo: Notas o Síntomas -->
@@ -249,16 +266,35 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
   radioMethodWhatsApp?.addEventListener('change', () => updateMethodUI('whatsapp'));
   radioMethodLlamada?.addEventListener('change', () => updateMethodUI('llamada'));
 
-  // Debounce para búsqueda automática de cliente por teléfono
+  // Búsqueda automática de cliente por teléfono con notificación y loader
   let debounceTimer = null;
+  let ultimoTelefonoBuscado = '';
+  let busquedaEnProgreso = false;
+
   if (inputTelefono) {
     inputTelefono.addEventListener('input', (e) => {
       clearTimeout(debounceTimer);
       const digits = sanitizePhone(e.target.value);
-      if (digits.length === 10 && typeof onPhoneLookup === 'function') {
-        debounceTimer = setTimeout(() => {
-          onPhoneLookup(digits);
-        }, 350);
+
+      if (digits.length === 10) {
+        if (digits !== ultimoTelefonoBuscado) {
+          ultimoTelefonoBuscado = digits;
+          busquedaEnProgreso = true;
+          debounceTimer = setTimeout(() => {
+            if (typeof onPhoneLookup === 'function') {
+              onPhoneLookup(digits);
+            }
+          }, 200);
+        }
+      } else {
+        // Solo resetear si previamente se había iniciado o completado una búsqueda
+        if (ultimoTelefonoBuscado !== '' || busquedaEnProgreso) {
+          ultimoTelefonoBuscado = '';
+          busquedaEnProgreso = false;
+          if (typeof onPhoneLookup === 'function') {
+            onPhoneLookup('');
+          }
+        }
       }
     });
   }
