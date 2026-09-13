@@ -13,6 +13,8 @@ import { renderHoursView, attachHoursListeners } from './components/hoursView.js
 import { renderFormView, attachFormListeners } from './components/formView.js';
 import { renderSuccessView, attachSuccessListeners } from './components/successView.js';
 import { escapeHtml } from './utils/sanitizer.js';
+import { scrollToAgendaTop, initAgendaAnchorLinks } from './utils/scroll.js';
+import { initNavbarScroll } from './utils/navbar.js';
 
 export class AgendaApp {
   /**
@@ -159,7 +161,10 @@ export class AgendaApp {
         attachCalendarListeners(
           this.container,
           (fecha) => this.handleSelectFecha(fecha),
-          () => this.store.setStep(1),
+          () => {
+            this.store.setStep(1);
+            scrollToAgendaTop('agenda-flow-container');
+          },
           () => this.handleCargarSiguientesDias()
         );
         break;
@@ -169,7 +174,10 @@ export class AgendaApp {
           this.container,
           state.horasDisponibles,
           (hora) => this.handleSelectHora(hora),
-          () => this.store.setStep(2)
+          () => {
+            this.store.setStep(2);
+            scrollToAgendaTop('agenda-flow-container');
+          }
         );
         break;
 
@@ -178,13 +186,17 @@ export class AgendaApp {
           this.container,
           (telefono) => this.handlePhoneLookup(telefono),
           (formData) => this.handleSubmitCita(formData),
-          () => this.store.setStep(3)
+          () => {
+            this.store.setStep(3);
+            scrollToAgendaTop('agenda-flow-container');
+          }
         );
         break;
 
       case 5:
         attachSuccessListeners(this.container, () => {
           this.store.reset();
+          scrollToAgendaTop('agenda-flow-container');
         });
         break;
     }
@@ -194,15 +206,20 @@ export class AgendaApp {
 
   /**
    * Maneja la selección de un servicio y descarga los primeros 12 días disponibles garantizados.
+   * Posiciona de inmediato la vista para que el loader sea visible y no caiga al pie de página.
    * @param {import('./api.js').Servicio} servicio
    */
   async handleSelectServicio(servicio) {
     this.store.selectServicio(servicio);
+    // Desplazar inmediatamente hacia el contenedor para enfocar el loader
+    scrollToAgendaTop('agenda-flow-container');
     this.renderLoading('Consultando disponibilidad en el calendario...');
 
     try {
       const calendario = await this.api.obtenerCalendario(servicio.id, 12);
       this.store.setCalendario(calendario);
+      // Asegurar que la vista comience al inicio del Paso 2 ("Selecciona el día de tu cita")
+      scrollToAgendaTop('agenda-flow-container');
     } catch (err) {
       console.error('[AgendaApp] Error al obtener calendario:', err);
       this.store.setError(err.message || 'Error al conectar con el calendario.');
@@ -257,22 +274,28 @@ export class AgendaApp {
 
   /**
    * Maneja la selección de una fecha y descarga las horas disponibles (Paso 3).
+   * Posiciona de inmediato la vista para que el loader sea visible y no caiga al pie de página.
    * @param {string} fecha - Formato YYYY-MM-DD
    */
   async handleSelectFecha(fecha) {
     const servicio = this.store.getState().servicioSeleccionado;
     if (!servicio) {
       this.store.setStep(1);
+      scrollToAgendaTop('agenda-flow-container');
       return;
     }
 
     this.store.selectFecha(fecha);
+    // Desplazar inmediatamente para enfocar el loader de horarios
+    scrollToAgendaTop('agenda-flow-container');
     this.store.setLoading(true, 'Cargando horarios disponibles...');
 
     try {
       const horas = await this.api.obtenerHorasDisponibles(fecha, servicio.id);
       this.store.setHorasDisponibles(horas);
       this.store.setLoading(false);
+      // Asegurar que la vista comience al inicio del Paso 3 ("Selecciona el horario de tu preferencia")
+      scrollToAgendaTop('agenda-flow-container');
     } catch (err) {
       console.error('[AgendaApp] Error al obtener horas:', err);
       this.store.setHorasDisponibles([]);
@@ -287,8 +310,8 @@ export class AgendaApp {
    */
   handleSelectHora(hora) {
     this.store.selectHora(hora);
-    // Desplazamiento suave al inicio de la agenda
-    this.container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Desplazamiento suave al inicio de la confirmación
+    scrollToAgendaTop('agenda-flow-container');
   }
 
   /**
@@ -360,7 +383,7 @@ export class AgendaApp {
 
       const citaResponse = await this.api.agendarCita(payload);
       this.store.setCitaExitosa(citaResponse);
-      this.container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scrollToAgendaTop('agenda-flow-container');
     } catch (err) {
       console.error('[AgendaApp] Error al agendar cita:', err);
       if (errorBox) {
@@ -385,7 +408,7 @@ export class AgendaApp {
     const currentStep = this.store.getState().step;
     if (targetStep < currentStep && targetStep >= 1) {
       this.store.setStep(targetStep);
-      this.container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      scrollToAgendaTop('agenda-flow-container');
     }
   }
 
@@ -403,9 +426,19 @@ export class AgendaApp {
   }
 }
 
-// Inicialización automática cuando el DOM esté listo
+/**
+ * Inicialización controlada de la aplicación y controladores globales de navegación.
+ */
+function bootAgendaApp() {
+  initNavbarScroll('.navbar');
+  initAgendaAnchorLinks();
+  new AgendaApp('agenda-flow-container');
+}
+
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    new AgendaApp('agenda-flow-container');
-  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootAgendaApp);
+  } else {
+    bootAgendaApp();
+  }
 }

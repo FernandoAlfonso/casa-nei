@@ -13,6 +13,7 @@
   --transition: all 0.3s ease;
   --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 10px 15px rgba(0, 0, 0, 0.05);
+  --header-height: 80px;
 }
 
 * {
@@ -54,14 +55,25 @@ img {
   position: fixed;
   top: 0;
   width: 100%;
-  background: rgba(252, 250, 248, 0.9);
+  background: rgba(252, 250, 248, 0.95);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 5%;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+.navbar.navbar--hidden {
+  transform: translateY(-100%);
+}
+
+.navbar:focus-within {
+  transform: translateY(0) !important;
 }
 
 .logo {
@@ -119,6 +131,11 @@ img {
 /* Sections */
 section {
   padding: 6rem 5%;
+  scroll-margin-top: calc(var(--header-height, 80px) + 1.25rem);
+}
+
+#agenda {
+  scroll-margin-top: calc(var(--header-height, 80px) + 1.25rem);
 }
 
 .section-title {
@@ -1318,16 +1335,21 @@ section {
 
 /* Alertas y Estados de Carga */
 .agenda-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 4rem 1rem;
+  padding: 3.5rem 1rem;
   color: var(--primary-color);
   font-size: 1.15rem;
+  min-height: 360px;
 }
 
 .agenda-loading i {
-  font-size: 2.2rem;
+  font-size: 2.5rem;
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .agenda-alert {
