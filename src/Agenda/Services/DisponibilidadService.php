@@ -6,40 +6,77 @@ use App\Agenda\Entities\EstadoCita;
 use App\Agenda\Repositories\CitaRepository;
 use App\Agenda\Repositories\HorarioRepository;
 use App\Agenda\Repositories\ServicioRepository;
-use DateTime;
 use DateInterval;
 use DatePeriod;
+use DateTime;
 
 /**
- * DisponibilidadService - Motor de cálculo para disponibilidad de fechas y horarios.
+ * Class DisponibilidadService
+ *
+ * Motor de cálculo de disponibilidad de fechas y slots horarios para Casa Nei.
+ * Evalúa los horarios de atención semanales, los bloqueos por festivos o vacaciones
+ * y las citas existentes para proyectar la disponibilidad en tiempo real.
+ *
+ * Optimizado para dispositivos móviles:
+ * - Capacidad de precargar slots en la misma respuesta del calendario (`con_slots=1`).
+ * - Formato amigable de horas precalculado (`hora_inicio_formato`, `etiqueta`).
+ *
+ * @package App\Agenda\Services
  */
 class DisponibilidadService
 {
+  /**
+   * Repositorio de horarios semanales y bloqueos de agenda.
+   */
+  private HorarioRepository $horarioRepo;
+
+  /**
+   * Repositorio de citas y reservas.
+   */
+  private CitaRepository $citaRepo;
+
+  /**
+   * Repositorio de servicios y duraciones.
+   */
+  private ServicioRepository $servicioRepo;
+
+  /**
+   * Constructor del servicio con soporte de inyección de dependencias.
+   *
+   * @param HorarioRepository|null $horarioRepo
+   * @param CitaRepository|null $citaRepo
+   * @param ServicioRepository|null $servicioRepo
+   */
   public function __construct(
-    private HorarioRepository $horarioRepo = new HorarioRepository(),
-    private CitaRepository $citaRepo = new CitaRepository(),
-    private ServicioRepository $servicioRepo = new ServicioRepository()
+    ?HorarioRepository $horarioRepo = null,
+    ?CitaRepository $citaRepo = null,
+    ?ServicioRepository $servicioRepo = null
   ) {
+    $this->horarioRepo = $horarioRepo ?? new HorarioRepository();
+    $this->citaRepo = $citaRepo ?? new CitaRepository();
+    $this->servicioRepo = $servicioRepo ?? new ServicioRepository();
   }
 
   /**
    * Obtiene la disponibilidad del calendario para las próximas N semanas a partir de una fecha.
    *
-   * @param string|null $fechaDesde Fecha inicial en formato YYYY-MM-DD (por defecto hoy)
-   * @param int $semanasAdelante Número de semanas hacia el futuro (por defecto 2)
-   * @param int|null $servicioId ID del servicio para calcular duración (opcional)
-   * @param bool $soloDisponibles Si es true, retorna solo días con disponibilidad garantizada
-   * @return array Resumen de días con su estado
+   * @param string|null $fechaDesde Fecha inicial en formato YYYY-MM-DD (por defecto hoy).
+   * @param int $semanasAdelante Número de semanas hacia el futuro (por defecto 2).
+   * @param int|null $servicioId ID del servicio para calcular duración (opcional).
+   * @param bool $soloDisponibles Si es true, retorna solo días con disponibilidad garantizada.
+   * @param bool $conSlots Si es true, incrusta los horarios disponibles en cada día (ahorra roundtrips móviles).
+   * @return array<string|int, array<string, mixed>> Resumen de días con su estado.
    */
   public function obtenerCalendario(
     ?string $fechaDesde = null,
     int $semanasAdelante = 2,
     ?int $servicioId = null,
-    bool $soloDisponibles = false
+    bool $soloDisponibles = false,
+    bool $conSlots = false
   ): array {
     if ($soloDisponibles) {
       $diasObjetivo = $semanasAdelante * 6; // 6 días laborables por semana (Lunes a Sábado) = 12 días para 2 semanas
-      return $this->obtenerDiasDisponibles($fechaDesde, $diasObjetivo, $servicioId);
+      return $this->obtenerDiasDisponibles($fechaDesde, $diasObjetivo, $servicioId, $conSlots);
     }
 
     $inicio = new DateTime($fechaDesde ?? 'today');
@@ -88,7 +125,7 @@ class DisponibilidadService
 
       // 1. Validar si el centro abre ese día de la semana
       if (!isset($horariosSemanales[$diaSemana])) {
-        $calendario[$fechaStr] = [
+        $diaData = [
           'fecha' => $fechaStr,
           'dia_semana' => $diaSemana,
           'estado' => 'cerrado',
@@ -96,6 +133,10 @@ class DisponibilidadService
           'slots_libres' => 0,
           'tiene_pendientes' => false
         ];
+        if ($conSlots) {
+          $diaData['slots'] = [];
+        }
+        $calendario[$fechaStr] = $diaData;
         continue;
       }
 
@@ -112,7 +153,7 @@ class DisponibilidadService
       }
 
       if ($bloqueoCompleto !== null) {
-        $calendario[$fechaStr] = [
+        $diaData = [
           'fecha' => $fechaStr,
           'dia_semana' => $diaSemana,
           'estado' => 'bloqueado',
@@ -120,6 +161,10 @@ class DisponibilidadService
           'slots_libres' => 0,
           'tiene_pendientes' => false
         ];
+        if ($conSlots) {
+          $diaData['slots'] = [];
+        }
+        $calendario[$fechaStr] = $diaData;
         continue;
       }
 
@@ -144,7 +189,7 @@ class DisponibilidadService
 
       $estado = count($slots) > 0 ? 'disponible' : 'ocupado';
 
-      $calendario[$fechaStr] = [
+      $diaData = [
         'fecha' => $fechaStr,
         'dia_semana' => $diaSemana,
         'estado' => $estado,
@@ -152,6 +197,12 @@ class DisponibilidadService
         'slots_libres' => count($slots),
         'tiene_pendientes' => $tienePendientes
       ];
+
+      if ($conSlots) {
+        $diaData['slots'] = $slots;
+      }
+
+      $calendario[$fechaStr] = $diaData;
     }
 
     return $calendario;
@@ -162,15 +213,17 @@ class DisponibilidadService
    * Recorre dinámicamente el calendario hacia el futuro saltando domingos (cerrados), bloqueos
    * festivos y días ocupados hasta completar exactamente la cantidad solicitada (ej. 12 días = 2 semanas completas de Lun a Sáb).
    *
-   * @param string|null $fechaDesde Fecha inicial en formato YYYY-MM-DD (por defecto hoy)
-   * @param int $cantidadDias Cantidad garantizada de días disponibles a retornar (por defecto 12)
-   * @param int|null $servicioId ID del servicio para calcular duración y slots
-   * @return array Lista indexada con los N días disponibles encontrados
+   * @param string|null $fechaDesde Fecha inicial en formato YYYY-MM-DD (por defecto hoy).
+   * @param int $cantidadDias Cantidad garantizada de días disponibles a retornar (por defecto 12).
+   * @param int|null $servicioId ID del servicio para calcular duración y slots.
+   * @param bool $conSlots Si es true, incrusta los horarios disponibles en cada día (ahorra roundtrips móviles).
+   * @return array<int, array<string, mixed>> Lista indexada con los N días disponibles encontrados.
    */
   public function obtenerDiasDisponibles(
     ?string $fechaDesde = null,
     int $cantidadDias = 12,
-    ?int $servicioId = null
+    ?int $servicioId = null,
+    bool $conSlots = false
   ): array {
     $inicio = new DateTime($fechaDesde ?? 'today');
 
@@ -270,7 +323,7 @@ class DisponibilidadService
             }
           }
 
-          $diasEncontrados[] = [
+          $diaItem = [
             'fecha' => $fechaStr,
             'dia_semana' => $diaSemana,
             'estado' => 'disponible',
@@ -278,6 +331,12 @@ class DisponibilidadService
             'slots_libres' => count($slots),
             'tiene_pendientes' => $tienePendientes
           ];
+
+          if ($conSlots) {
+            $diaItem['slots'] = $slots;
+          }
+
+          $diasEncontrados[] = $diaItem;
 
           if (count($diasEncontrados) >= $cantidadDias) {
             break 2; // Salir de ambos bucles al completar la cuota de días
@@ -292,13 +351,12 @@ class DisponibilidadService
     return $diasEncontrados;
   }
 
-
   /**
    * Obtiene la lista de horarios específicos disponibles para un día dado y servicio.
    *
-   * @param string $fecha Formato YYYY-MM-DD
-   * @param int $servicioId
-   * @return array Lista de rangos disponibles: [['hora_inicio' => '09:00', 'hora_fin' => '10:00'], ...]
+   * @param string $fecha Formato YYYY-MM-DD.
+   * @param int $servicioId ID del servicio solicitado.
+   * @return array<int, array<string, string>> Lista de slots con formato estándar y amigable.
    */
   public function obtenerHorasDisponibles(string $fecha, int $servicioId): array
   {
@@ -339,6 +397,15 @@ class DisponibilidadService
 
   /**
    * Divide el horario laboral en intervalos y descuenta citas y bloqueos existentes.
+   * Enriquece cada slot con formatos legibles en 12 horas (AM/PM) para vistas móviles.
+   *
+   * @param string $fecha Formato YYYY-MM-DD.
+   * @param string $horaApertura Hora de inicio laboral (HH:MM:SS).
+   * @param string $horaCierre Hora de cierre laboral (HH:MM:SS).
+   * @param int $duracionMinutos Duración del servicio.
+   * @param array $bloqueos Bloqueos del día.
+   * @param array $citas Citas del día.
+   * @return array<int, array<string, string>>
    */
   private function generarSlotsDisponibles(
     string $fecha,
@@ -396,11 +463,19 @@ class DisponibilidadService
       }
 
       if (!$colisionCita) {
+        $horaInicioCorta = $actual->format('H:i');
+        $horaFinCorta = $finSlot->format('H:i');
+        $inicioAmPm = self::formatearHoraAmPm($horaInicioCorta);
+        $finAmPm = self::formatearHoraAmPm($horaFinCorta);
+
         $slots[] = [
-          'hora_inicio' => $actual->format('H:i'),
-          'hora_fin' => $finSlot->format('H:i'),
+          'hora_inicio' => $horaInicioCorta,
+          'hora_fin' => $horaFinCorta,
           'hora_inicio_completa' => $horaInicioStr,
-          'hora_fin_completa' => $horaFinStr
+          'hora_fin_completa' => $horaFinStr,
+          'hora_inicio_formato' => $inicioAmPm,
+          'hora_fin_formato' => $finAmPm,
+          'etiqueta' => "{$inicioAmPm} - {$finAmPm}"
         ];
       }
 
@@ -411,7 +486,38 @@ class DisponibilidadService
   }
 
   /**
+   * Convierte una hora en formato HH:MM o HH:MM:SS a formato legible de 12 horas (ej. "9am", "9:30am", "5pm").
+   *
+   * @param string $hora
+   * @return string
+   */
+  public static function formatearHoraAmPm(string $hora): string
+  {
+    $horaTrim = trim($hora);
+    if ($horaTrim === '') {
+      return '';
+    }
+
+    $dt = DateTime::createFromFormat('H:i:s', $horaTrim) ?: DateTime::createFromFormat('H:i', $horaTrim);
+    if (!$dt) {
+      return $hora;
+    }
+
+    $h = (int) $dt->format('g');
+    $m = (int) $dt->format('i');
+    $ampm = strtolower($dt->format('a'));
+
+    return $m === 0 ? "{$h}{$ampm}" : "{$h}:" . $dt->format('i') . $ampm;
+  }
+
+  /**
    * Comprueba si dos rangos de horas se traslapan.
+   *
+   * @param string $inicioA
+   * @param string $finA
+   * @param string $inicioB
+   * @param string $finB
+   * @return bool
    */
   private function hayTraslape(string $inicioA, string $finA, string $inicioB, string $finB): bool
   {

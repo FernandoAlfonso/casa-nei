@@ -97,11 +97,15 @@ class AgendaController
       $soloDisponiblesParam = $request->getQuery('solo_disponibles');
       $soloDisponibles = $soloDisponiblesParam === null || $soloDisponiblesParam === '1' || $soloDisponiblesParam === 'true';
 
+      // Parámetro con_slots para optimizar viajes de red en conexiones móviles
+      $conSlotsParam = $request->getQuery('con_slots');
+      $conSlots = $conSlotsParam === '1' || $conSlotsParam === 'true';
+
       if ($soloDisponibles) {
-        $calendario = $this->disponibilidadService->obtenerDiasDisponibles($fechaDesde, $cantidadDias, $servicioId);
+        $calendario = $this->disponibilidadService->obtenerDiasDisponibles($fechaDesde, $cantidadDias, $servicioId, $conSlots);
       } else {
         $semanas = (int) ceil($cantidadDias / 6);
-        $calendario = array_values($this->disponibilidadService->obtenerCalendario($fechaDesde, $semanas, $servicioId, false));
+        $calendario = array_values($this->disponibilidadService->obtenerCalendario($fechaDesde, $semanas, $servicioId, false, $conSlots));
       }
 
       Response::success($calendario, "Calendario generado con éxito");
