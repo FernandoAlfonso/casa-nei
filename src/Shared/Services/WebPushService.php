@@ -37,10 +37,24 @@ class WebPushService
   /**
    * Constructor del servicio.
    *
+  /**
+   * Conexión a la base de datos MySQL (opcional/perezosa).
+   */
+  private ?\App\Shared\Db\DataBase $db = null;
+
+  /**
+   * Cache de verificación de existencia de tabla suscripciones_push en base de datos.
+   */
+  private static ?bool $hasTablePush = null;
+
+  /**
+   * Constructor del servicio.
+   *
    * @param string|null $storageDir Directorio para almacenar credenciales y suscripciones.
    * @param string $subject Correo de contacto del operador del servicio VAPID.
+   * @param \App\Shared\Db\DataBase|null $db Conexión opcional a base de datos.
    */
-  public function __construct(?string $storageDir = null, string $subject = 'mailto:casaneicolima@gmail.com')
+  public function __construct(?string $storageDir = null, string $subject = 'mailto:casaneicolima@gmail.com', ?\App\Shared\Db\DataBase $db = null)
   {
     $dir = $storageDir ?? dirname(__DIR__) . '/Security/storage';
     if (!is_dir($dir)) {
@@ -49,6 +63,38 @@ class WebPushService
     $this->keysFilePath = $dir . '/vapid_keys.json';
     $this->subsFilePath = $dir . '/pwa_subscriptions.json';
     $this->subject = $subject;
+    $this->db = $db;
+  }
+
+  /**
+   * Retorna la conexión activa a base de datos.
+   *
+   * @return \App\Shared\Db\DataBase
+   */
+  private function getDb(): \App\Shared\Db\DataBase
+  {
+    if ($this->db === null) {
+      $this->db = \App\Shared\Db\DataBase::getInstance();
+    }
+    return $this->db;
+  }
+
+  /**
+   * Comprueba si la tabla suscripciones_push existe en la base de datos MySQL.
+   *
+   * @return bool
+   */
+  private function tieneTablaPush(): bool
+  {
+    if (self::$hasTablePush === null) {
+      try {
+        $tables = $this->getDb()->fetchAll("SHOW TABLES LIKE 'suscripciones_push'");
+        self::$hasTablePush = !empty($tables);
+      } catch (\Throwable $e) {
+        self::$hasTablePush = false;
+      }
+    }
+    return self::$hasTablePush;
   }
 
   /**
@@ -66,6 +112,8 @@ class WebPushService
   /**
    * Guarda o actualiza la suscripción push de un dispositivo cliente.
    *
+   * Persiste en la tabla MySQL suscripciones_push si existe, y replica en archivo JSON para redundancia.
+   *
    * @param array $subscription Datos de suscripción ({ endpoint, keys: { p256dh, auth } }).
    * @return bool True si se guardó correctamente.
    */
@@ -75,20 +123,83 @@ class WebPushService
       return false;
     }
 
-    $subscriptions = $this->obtenerSuscripciones();
+    $guardadoDb = false;
+    if ($this->tieneTablaPush()) {
+      try {
+        $endpoint = $subscription['endpoint'];
+        $hash = hash('sha256', $endpoint);
+        $p256dh = $subscription['keys']['p256dh'];
+        $auth = $subscription['keys']['auth'];
+        $ua = $subscription['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? null);
+        $ip = $subscription['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? null);
+
+        $sql = "INSERT INTO suscripciones_push (endpoint, endpoint_hash, p256dh, auth, user_agent, ip, activo)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
+                ON DUPLICATE KEY UPDATE
+                  p256dh = VALUES(p256dh),
+                  auth = VALUES(auth),
+                  user_agent = VALUES(user_agent),
+                  ip = VALUES(ip),
+                  activo = 1,
+                  updated_at = NOW()";
+
+        $this->getDb()->execute($sql, [$endpoint, $hash, $p256dh, $auth, $ua, $ip]);
+        $guardadoDb = true;
+      } catch (\Throwable $e) {
+        error_log("Error al guardar suscripción push en MySQL: " . $e->getMessage());
+      }
+    }
+
+    // Redundancia en archivo plano
+    $subscriptions = $this->obtenerSuscripcionesDesdeArchivo();
     $endpoint = $subscription['endpoint'];
     $subscription['actualizado_el'] = date('Y-m-d H:i:s');
     $subscriptions[$endpoint] = $subscription;
 
-    return (bool) file_put_contents($this->subsFilePath, json_encode($subscriptions, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $guardadoFile = (bool) file_put_contents($this->subsFilePath, json_encode($subscriptions, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    return $guardadoDb || $guardadoFile;
   }
 
   /**
-   * Obtiene la lista de todas las suscripciones guardadas.
+   * Obtiene la lista de todas las suscripciones push activas registradas.
    *
    * @return array<string, array> Mapa de suscripciones indexadas por endpoint.
    */
   public function obtenerSuscripciones(): array
+  {
+    if ($this->tieneTablaPush()) {
+      try {
+        $rows = $this->getDb()->fetchAll("SELECT * FROM suscripciones_push WHERE activo = 1 ORDER BY id DESC");
+        if (!empty($rows)) {
+          $result = [];
+          foreach ($rows as $r) {
+            $result[$r['endpoint']] = [
+              'endpoint' => $r['endpoint'],
+              'keys' => [
+                'p256dh' => $r['p256dh'],
+                'auth' => $r['auth']
+              ],
+              'user_agent' => $r['user_agent'],
+              'actualizado_el' => $r['updated_at'] ?? $r['created_at']
+            ];
+          }
+          return $result;
+        }
+      } catch (\Throwable $e) {
+        error_log("Error al leer suscripciones de MySQL: " . $e->getMessage());
+      }
+    }
+
+    return $this->obtenerSuscripcionesDesdeArchivo();
+  }
+
+  /**
+   * Lee suscripciones del archivo JSON local de respaldo.
+   *
+   * @return array<string, array>
+   */
+  private function obtenerSuscripcionesDesdeArchivo(): array
   {
     if (!file_exists($this->subsFilePath)) {
       return [];
@@ -98,13 +209,32 @@ class WebPushService
   }
 
   /**
-   * Obtiene la última suscripción registrada.
+   * Obtiene la última suscripción registrada para entrega prioritaria.
    *
    * @return array|null Última suscripción o null si no hay ninguna.
    */
   public function obtenerUltimaSuscripcion(): ?array
   {
-    $subs = $this->obtenerSuscripciones();
+    if ($this->tieneTablaPush()) {
+      try {
+        $row = $this->getDb()->fetchOne("SELECT * FROM suscripciones_push WHERE activo = 1 ORDER BY updated_at DESC, id DESC LIMIT 1");
+        if ($row) {
+          return [
+            'endpoint' => $row['endpoint'],
+            'keys' => [
+              'p256dh' => $row['p256dh'],
+              'auth' => $row['auth']
+            ],
+            'user_agent' => $row['user_agent'],
+            'actualizado_el' => $row['updated_at'] ?? $row['created_at']
+          ];
+        }
+      } catch (\Throwable $e) {
+        error_log("Error al leer última suscripción de MySQL: " . $e->getMessage());
+      }
+    }
+
+    $subs = $this->obtenerSuscripcionesDesdeArchivo();
     if (empty($subs)) {
       return null;
     }
