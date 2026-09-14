@@ -9,9 +9,10 @@ use App\Shared\Security\Encryption;
 use Exception;
 
 /**
- * CitaRepository - Repositorio para la gestión y persistencia de citas y solicitudes de agenda.
+ * Class CitaRepository
  *
- * Administra el ciclo de vida de las reservas en base de datos, códigos únicos alfanuméricos,
+ * Repositorio encargado de la persistencia, consulta y ciclo de vida de las reservas y citas.
+ * Maneja operaciones de inserción atómica, búsqueda por ID y código público, cambio de estados,
  * verificación de traslapes y extracción de solicitudes para el panel administrativo.
  *
  * @package App\Agenda\Repositories
@@ -29,11 +30,6 @@ class CitaRepository
   private Encryption $crypto;
 
   /**
-   * Cache estático para validar si la tabla citas posee las columnas extendidas (tiene_whatsapp, canal).
-   */
-  private static ?bool $hasExtendedColumns = null;
-
-  /**
    * Constructor del repositorio.
    *
    * @param DataBase|null $db Instancia de DataBase o Singleton.
@@ -43,24 +39,6 @@ class CitaRepository
   {
     $this->db = $db ?? DataBase::getInstance();
     $this->crypto = $crypto ?? new Encryption();
-  }
-
-  /**
-   * Comprueba dinámicamente si la tabla citas cuenta con las columnas extendidas (tiene_whatsapp, canal).
-   *
-   * @return bool
-   */
-  private function tieneColumnasExtendidas(): bool
-  {
-    if (self::$hasExtendedColumns === null) {
-      try {
-        $cols = $this->db->fetchAll("SHOW COLUMNS FROM citas LIKE 'tiene_whatsapp'");
-        self::$hasExtendedColumns = !empty($cols);
-      } catch (\Throwable $e) {
-        self::$hasExtendedColumns = false;
-      }
-    }
-    return self::$hasExtendedColumns;
   }
 
   /**
@@ -78,8 +56,6 @@ class CitaRepository
   /**
    * Registra una nueva cita en la base de datos.
    *
-   * Si la tabla citas ya cuenta con las columnas extendidas, persiste tiene_whatsapp y canal.
-   *
    * @param Cita $cita Entidad Cita a persistir.
    * @return int ID de la cita recién creada.
    * @throws Exception Si la inserción SQL falla.
@@ -90,43 +66,25 @@ class CitaRepository
       $cita->setCodigoCita(self::generarCodigo());
     }
 
-    if ($this->tieneColumnasExtendidas()) {
-      $sql = "INSERT INTO citas (
-                codigo_cita, cliente_id, servicio_id, fecha_cita,
-                hora_inicio, hora_fin, estado, tiene_whatsapp, canal, notas_cliente, notas_admin
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO citas (
+              codigo_cita, cliente_id, servicio_id, fecha_cita,
+              hora_inicio, hora_fin, estado, tiene_whatsapp, canal,
+              notas_cliente, notas_admin
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-      $this->db->execute($sql, [
-        $cita->getCodigoCita(),
-        $cita->getClienteId(),
-        $cita->getServicioId(),
-        $cita->getFechaCita(),
-        $cita->getHoraInicio(),
-        $cita->getHoraFin(),
-        $cita->getEstado()->value,
-        $cita->tieneWhatsapp() ? 1 : 0,
-        $cita->getCanal(),
-        $cita->getNotasCliente(),
-        $cita->getNotasAdmin()
-      ]);
-    } else {
-      $sql = "INSERT INTO citas (
-                codigo_cita, cliente_id, servicio_id, fecha_cita,
-                hora_inicio, hora_fin, estado, notas_cliente, notas_admin
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-      $this->db->execute($sql, [
-        $cita->getCodigoCita(),
-        $cita->getClienteId(),
-        $cita->getServicioId(),
-        $cita->getFechaCita(),
-        $cita->getHoraInicio(),
-        $cita->getHoraFin(),
-        $cita->getEstado()->value,
-        $cita->getNotasCliente(),
-        $cita->getNotasAdmin()
-      ]);
-    }
+    $this->db->execute($sql, [
+      $cita->getCodigoCita(),
+      $cita->getClienteId(),
+      $cita->getServicioId(),
+      $cita->getFechaCita(),
+      $cita->getHoraInicio(),
+      $cita->getHoraFin(),
+      $cita->getEstado()->value,
+      $cita->tieneWhatsapp() ? 1 : 0,
+      $cita->getCanal(),
+      $cita->getNotasCliente(),
+      $cita->getNotasAdmin()
+    ]);
 
     $id = (int) $this->db->lastInsertId();
     $cita->setId($id);
@@ -141,10 +99,9 @@ class CitaRepository
    */
   public function buscarPorId(int $id): ?Cita
   {
-    $extraCols = $this->tieneColumnasExtendidas() ? ', tiene_whatsapp, canal' : '';
     $sql = "SELECT id, codigo_cita, cliente_id, servicio_id, fecha_cita,
-                   hora_inicio, hora_fin, estado, notas_cliente, notas_admin,
-                   created_at, updated_at{$extraCols}
+                   hora_inicio, hora_fin, estado, tiene_whatsapp, canal,
+                   notas_cliente, notas_admin, created_at, updated_at
             FROM citas
             WHERE id = ?
             LIMIT 1";
@@ -161,10 +118,9 @@ class CitaRepository
    */
   public function buscarPorCodigo(string $codigoCita): ?Cita
   {
-    $extraCols = $this->tieneColumnasExtendidas() ? ', tiene_whatsapp, canal' : '';
     $sql = "SELECT id, codigo_cita, cliente_id, servicio_id, fecha_cita,
-                   hora_inicio, hora_fin, estado, notas_cliente, notas_admin,
-                   created_at, updated_at{$extraCols}
+                   hora_inicio, hora_fin, estado, tiene_whatsapp, canal,
+                   notas_cliente, notas_admin, created_at, updated_at
             FROM citas
             WHERE codigo_cita = ?
             LIMIT 1";
@@ -200,29 +156,10 @@ class CitaRepository
    */
   public function actualizar(Cita $cita): bool
   {
-    if ($this->tieneColumnasExtendidas()) {
-      $sql = "UPDATE citas
-              SET servicio_id = ?, fecha_cita = ?, hora_inicio = ?, hora_fin = ?,
-                  estado = ?, tiene_whatsapp = ?, canal = ?, notas_cliente = ?, notas_admin = ?
-              WHERE id = ?";
-
-      return $this->db->execute($sql, [
-        $cita->getServicioId(),
-        $cita->getFechaCita(),
-        $cita->getHoraInicio(),
-        $cita->getHoraFin(),
-        $cita->getEstado()->value,
-        $cita->tieneWhatsapp() ? 1 : 0,
-        $cita->getCanal(),
-        $cita->getNotasCliente(),
-        $cita->getNotasAdmin(),
-        $cita->getId()
-      ]) > 0;
-    }
-
     $sql = "UPDATE citas
             SET servicio_id = ?, fecha_cita = ?, hora_inicio = ?, hora_fin = ?,
-                estado = ?, notas_cliente = ?, notas_admin = ?
+                estado = ?, tiene_whatsapp = ?, canal = ?,
+                notas_cliente = ?, notas_admin = ?
             WHERE id = ?";
 
     return $this->db->execute($sql, [
@@ -231,6 +168,8 @@ class CitaRepository
       $cita->getHoraInicio(),
       $cita->getHoraFin(),
       $cita->getEstado()->value,
+      $cita->tieneWhatsapp() ? 1 : 0,
+      $cita->getCanal(),
       $cita->getNotasCliente(),
       $cita->getNotasAdmin(),
       $cita->getId()
@@ -312,8 +251,6 @@ class CitaRepository
    */
   public function obtenerSolicitudesPendientes(): array
   {
-    $extraFields = $this->tieneColumnasExtendidas() ? "c.tiene_whatsapp, c.canal," : "1 AS tiene_whatsapp, 'web' AS canal,";
-
     $sql = "SELECT
               c.id AS cita_id,
               c.codigo_cita,
@@ -321,7 +258,8 @@ class CitaRepository
               c.hora_inicio,
               c.hora_fin,
               c.estado,
-              {$extraFields}
+              c.tiene_whatsapp,
+              c.canal,
               c.notas_cliente,
               c.notas_admin,
               c.created_at AS fecha_solicitud,
@@ -350,4 +288,3 @@ class CitaRepository
     return $rows;
   }
 }
-

@@ -2,25 +2,26 @@
 
 namespace App\Agenda\Controllers;
 
-use App\Agenda\Repositories\CitaRepository;
-use App\Agenda\Repositories\ServicioRepository;
 use App\Agenda\Services\AgendaService;
 use App\Agenda\Services\DisponibilidadService;
 use App\Shared\Http\Request;
 use App\Shared\Http\Response;
-use Exception;
 use Throwable;
 
 /**
  * Class AgendaController
  *
- * Controlador HTTP para el módulo de Agenda y Citas de Casa Nei.
+ * Controlador HTTP delgado (Thin Controller) para el módulo de Agenda y Citas de Casa Nei.
+ * Delega la lógica de negocio a los servicios de dominio correspondientes y orquesta
+ * el flujo HTTP de entrada (Request) y salida (Response).
+ *
  * Expone endpoints REST para:
  * - Catálogo de servicios activos.
  * - Calendario de disponibilidad en tiempo real.
  * - Horarios libres por día.
  * - Consulta de clientes (Blind Index).
  * - Agendado de citas con concurrencia y transacciones atómicas.
+ * - Agendado administrativo directo (con teléfono opcional y canal admin).
  * - Panel administrativo (consulta, confirmación, cancelación y reprogramación).
  *
  * @package App\Agenda\Controllers
@@ -38,33 +39,17 @@ class AgendaController
   private DisponibilidadService $disponibilidadService;
 
   /**
-   * Repositorio de catálogo de servicios.
-   */
-  private ServicioRepository $servicioRepo;
-
-  /**
-   * Repositorio de citas y reservas.
-   */
-  private CitaRepository $citaRepo;
-
-  /**
-   * Constructor con soporte de inyección de dependencias.
+   * Constructor con soporte de inyección de dependencias PSR-11.
    *
    * @param AgendaService|null $agendaService
    * @param DisponibilidadService|null $disponibilidadService
-   * @param ServicioRepository|null $servicioRepo
-   * @param CitaRepository|null $citaRepo
    */
   public function __construct(
     ?AgendaService $agendaService = null,
-    ?DisponibilidadService $disponibilidadService = null,
-    ?ServicioRepository $servicioRepo = null,
-    ?CitaRepository $citaRepo = null
+    ?DisponibilidadService $disponibilidadService = null
   ) {
     $this->agendaService = $agendaService ?? new AgendaService();
     $this->disponibilidadService = $disponibilidadService ?? new DisponibilidadService();
-    $this->servicioRepo = $servicioRepo ?? new ServicioRepository();
-    $this->citaRepo = $citaRepo ?? new CitaRepository();
   }
 
   /**
@@ -78,8 +63,7 @@ class AgendaController
   public function obtenerServicios(Request $request): void
   {
     try {
-      $servicios = $this->servicioRepo->obtenerActivos();
-      $data = array_map(fn($s) => $s->toArray(), $servicios);
+      $data = $this->agendaService->obtenerCatalogoServicios();
       Response::success($data, "Servicios recuperados con éxito");
     } catch (Throwable $e) {
       Response::error("Error al obtener los servicios: " . $e->getMessage(), 500);
@@ -275,6 +259,96 @@ class AgendaController
   }
 
   /**
+   * POST /api/admin/citas/agendar
+   * Body: {
+   *   "nombre_completo": "Paciente Presencial",
+   *   "telefono": "3121000000"|null,
+   *   "servicio_id": 1,
+   *   "fecha_cita": "YYYY-MM-DD",
+   *   "hora_inicio": "HH:MM",
+   *   "notas_admin": "...",
+   *   "notas_cliente": "...",
+   *   "confirmar_inmediatamente": bool,
+   *   "tiene_whatsapp": bool|null,
+   *   "canal": "admin"|"llamada"
+   * }
+   *
+   * Endpoint Administrativo: Registra una cita directamente desde el panel del terapeuta
+   * con teléfono opcional, canal administrativo y confirmación inmediata opcional.
+   *
+   * @param Request $request
+   * @return void
+   */
+  public function agendarCitaAdmin(Request $request): void
+  {
+    try {
+      $nombre = trim((string) $request->get('nombre_completo', ''));
+      $telefonoRaw = $request->get('telefono');
+      $telefono = $telefonoRaw !== null && trim((string) $telefonoRaw) !== '' ? trim((string) $telefonoRaw) : null;
+      $servicioId = (int) $request->get('servicio_id', 0);
+      $fecha = trim((string) $request->get('fecha_cita', ''));
+      $hora = trim((string) $request->get('hora_inicio', ''));
+      $notasAdmin = $request->get('notas_admin');
+      $notasCliente = $request->get('notas_cliente');
+
+      $confirmarInmediatamente = filter_var(
+        $request->get('confirmar_inmediatamente', false),
+        FILTER_VALIDATE_BOOLEAN
+      );
+
+      $tieneWhatsappRaw = $request->get('tiene_whatsapp');
+      $tieneWhatsapp = $tieneWhatsappRaw !== null
+        ? filter_var($tieneWhatsappRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+        : null;
+
+      $canal = trim((string) $request->get('canal', 'admin'));
+      if (empty($canal)) {
+        $canal = 'admin';
+      }
+
+      $errores = [];
+      if (empty($nombre)) {
+        $errores[] = "El nombre del paciente es obligatorio.";
+      }
+      if ($servicioId <= 0) {
+        $errores[] = "Debe seleccionar un servicio válido.";
+      }
+      if (empty($fecha)) {
+        $errores[] = "La fecha de la cita es obligatoria.";
+      }
+      if (empty($hora)) {
+        $errores[] = "La hora de inicio es obligatoria.";
+      }
+
+      if (!empty($errores)) {
+        Response::error("Datos incompletos para el registro administrativo de la cita.", 422, $errores);
+      }
+
+      $resultado = $this->agendaService->agendarCitaAdmin(
+        nombreCompleto: $nombre,
+        telefono: $telefono,
+        servicioId: $servicioId,
+        fechaCita: $fecha,
+        horaInicio: $hora,
+        notasAdmin: $notasAdmin,
+        notasCliente: $notasCliente,
+        confirmarInmediatamente: $confirmarInmediatamente,
+        tieneWhatsapp: $tieneWhatsapp,
+        canal: $canal
+      );
+
+      Response::success($resultado, "Cita administrativa registrada con éxito", 201);
+    } catch (Throwable $e) {
+      $mensaje = $e->getMessage();
+      $codigoHttp = (str_contains($mensaje, 'ocupado') || str_contains($mensaje, 'conflicto') || str_contains($mensaje, 'no labora') || str_contains($mensaje, 'no se encuentra disponible'))
+        ? 409
+        : 400;
+
+      Response::error($mensaje, $codigoHttp);
+    }
+  }
+
+  /**
    * GET /api/admin/solicitudes
    *
    * Retorna las citas en estado 'pendiente' para el panel administrativo, con teléfonos descifrados.
@@ -285,7 +359,7 @@ class AgendaController
   public function obtenerSolicitudesAdmin(Request $request): void
   {
     try {
-      $solicitudes = $this->citaRepo->obtenerSolicitudesPendientes();
+      $solicitudes = $this->agendaService->obtenerSolicitudesPendientesAdmin();
       Response::success($solicitudes, "Solicitudes pendientes recuperadas con éxito");
     } catch (Throwable $e) {
       Response::error("Error al obtener solicitudes: " . $e->getMessage(), 500);
@@ -389,7 +463,7 @@ class AgendaController
       $codigoHttp = 400;
       if (str_contains($mensaje, 'no encontrada')) {
         $codigoHttp = 404;
-      } elseif (str_contains($mensaje, 'cerrado') || str_contains($mensaje, 'bloqueado') || str_contains($mensaje, 'conflicto')) {
+      } elseif (str_contains($mensaje, 'cerrado') || str_contains($mensaje, 'no labora') || str_contains($mensaje, 'bloqueado') || str_contains($mensaje, 'conflicto')) {
         $codigoHttp = 409;
       }
 

@@ -130,6 +130,28 @@ class AgendaService
   }
 
   /**
+   * Obtiene el catálogo completo de servicios activos en formato array para la API.
+   *
+   * @return array<int, array<string, mixed>>
+   */
+  public function obtenerCatalogoServicios(): array
+  {
+    $servicios = $this->servicioRepo->obtenerActivos();
+    return array_map(fn($s) => $s->toArray(), $servicios);
+  }
+
+  /**
+   * Obtiene todas las solicitudes pendientes de confirmación para el panel administrativo,
+   * con los números telefónicos de los pacientes descifrados a texto plano seguro.
+   *
+   * @return array<int, array<string, mixed>>
+   */
+  public function obtenerSolicitudesPendientesAdmin(): array
+  {
+    return $this->citaRepo->obtenerSolicitudesPendientes();
+  }
+
+  /**
    * Caso de Uso: Agendar una nueva cita (Estado inicial: Pendiente).
    *
    * Ejecuta dentro de una transacción ACID:
@@ -295,6 +317,170 @@ class AgendaService
       'hora_inicio' => $inicioObj->format('H:i'),
       'hora_inicio_formato' => self::formatearHoraAmPm($inicioObj->format('H:i')),
       'hora_fin' => $finObj->format('H:i'),
+      'mensaje_whatsapp' => $mensajeWhatsapp,
+      'whatsapp_url' => $whatsappUrl
+    ];
+  }
+
+  /**
+   * Caso de Uso Administrativo: Agendar una cita directamente desde el panel del terapeuta.
+   *
+   * Permite:
+   * - Pacientes sin celular (presenciales o por recomendación).
+   * - Confirmación inmediata opcional (estado 'confirmada') o dejarla 'pendiente'.
+   * - Canal 'admin' o personalizado ('llamada', etc.).
+   * - Registro de notas administrativas internas.
+   *
+   * @param string $nombreCompleto
+   * @param string|null $telefono
+   * @param int $servicioId
+   * @param string $fechaCita YYYY-MM-DD
+   * @param string $horaInicio HH:MM o HH:MM:SS
+   * @param string|null $notasAdmin
+   * @param string|null $notasCliente
+   * @param bool $confirmarInmediatamente
+   * @param bool|null $tieneWhatsapp
+   * @param string $canal
+   * @return array<string, mixed>
+   * @throws Exception
+   */
+  public function agendarCitaAdmin(
+    string $nombreCompleto,
+    ?string $telefono,
+    int $servicioId,
+    string $fechaCita,
+    string $horaInicio,
+    ?string $notasAdmin = null,
+    ?string $notasCliente = null,
+    bool $confirmarInmediatamente = false,
+    ?bool $tieneWhatsapp = null,
+    string $canal = 'admin'
+  ): array {
+    $servicio = $this->servicioRepo->buscarPorId($servicioId);
+    if (!$servicio || !$servicio->isActivo()) {
+      throw new Exception("El servicio seleccionado no es válido o no se encuentra activo.");
+    }
+
+    $inicioObj = new DateTime("{$fechaCita} {$horaInicio}");
+    $finObj = (clone $inicioObj)->modify("+{$servicio->getDuracionMinutos()} minutes");
+    $horaInicioNorm = $inicioObj->format('H:i:s');
+    $horaFinNorm = $finObj->format('H:i:s');
+
+    // Validar día laboral y bloqueos
+    $diaSemana = (int) $inicioObj->format('w');
+    $horarioDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
+    if (!$horarioDia || !$horarioDia->isActivo()) {
+      throw new Exception("El centro no labora en el día de la semana seleccionado ({$fechaCita}).");
+    }
+
+    $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaCita, $fechaCita);
+    foreach ($bloqueos as $bloqueo) {
+      if ($bloqueo->esDiaCompleto()) {
+        $motivoB = $bloqueo->getMotivo() ? " ({$bloqueo->getMotivo()})" : "";
+        throw new Exception("El día {$fechaCita} no se encuentra disponible por suspensión de labores{$motivoB}.");
+      }
+    }
+
+    $telefonoNormalizado = !empty(trim((string) $telefono))
+      ? Encryption::normalizePhone($telefono)
+      : null;
+
+    $tieneWaEfectivo = $tieneWhatsapp ?? ($telefonoNormalizado !== null && $canal !== 'llamada');
+    $estadoInicial = $confirmarInmediatamente ? EstadoCita::CONFIRMADA : EstadoCita::PENDIENTE;
+
+    $resultado = $this->db->transaction(function () use (
+      $nombreCompleto,
+      $telefonoNormalizado,
+      $servicio,
+      $fechaCita,
+      $horaInicioNorm,
+      $horaFinNorm,
+      $estadoInicial,
+      $tieneWaEfectivo,
+      $canal,
+      $notasCliente,
+      $notasAdmin
+    ) {
+      if ($this->citaRepo->existeConflictoHorario($fechaCita, $horaInicioNorm, $horaFinNorm)) {
+        throw new Exception("Lo sentimos, el horario para el día {$fechaCita} ya se encuentra ocupado por otra cita.");
+      }
+
+      $cliente = null;
+      if ($telefonoNormalizado !== null) {
+        $cliente = $this->clienteRepo->buscarPorTelefono($telefonoNormalizado);
+      }
+
+      if (!$cliente) {
+        $cliente = $this->clienteRepo->registrar($nombreCompleto, $telefonoNormalizado);
+      }
+
+      $codigoCita = CitaRepository::generarCodigo();
+      $cita = new Cita(
+        id: 0,
+        codigoCita: $codigoCita,
+        clienteId: $cliente->getId(),
+        servicioId: $servicio->getId(),
+        fechaCita: $fechaCita,
+        horaInicio: $horaInicioNorm,
+        horaFin: $horaFinNorm,
+        estado: $estadoInicial,
+        tieneWhatsapp: $tieneWaEfectivo,
+        canal: $canal,
+        notasCliente: $notasCliente,
+        notasAdmin: $notasAdmin
+      );
+
+      $citaId = $this->citaRepo->crear($cita);
+      $cita->setId($citaId);
+
+      return [
+        'cita' => $cita,
+        'cliente' => $cliente,
+        'codigo_cita' => $codigoCita,
+        'cita_id' => $citaId
+      ];
+    });
+
+    /** @var Cita $citaCreada */
+    $citaCreada = $resultado['cita'];
+    /** @var Cliente $clienteCreado */
+    $clienteCreado = $resultado['cliente'];
+
+    $whatsappUrl = null;
+    $mensajeWhatsapp = null;
+    if ($tieneWaEfectivo && $telefonoNormalizado !== null) {
+      $mensajeWhatsapp = $this->generarMensajeConfirmacionCliente(
+        nombre: $clienteCreado->getNombreCompleto(),
+        servicioNombre: $servicio->getNombre(),
+        fecha: $fechaCita,
+        horaInicio: substr($horaInicioNorm, 0, 5),
+        codigoCita: $resultado['codigo_cita'],
+        mensajeExtra: $notasAdmin
+      );
+      $whatsappUrl = $this->crearEnlaceWhatsapp($telefonoNormalizado, $mensajeWhatsapp);
+    }
+
+    return [
+      'exito' => true,
+      'cita_id' => $resultado['cita_id'],
+      'codigo_cita' => $resultado['codigo_cita'],
+      'estado' => $citaCreada->getEstado()->value,
+      'tiene_whatsapp' => $citaCreada->tieneWhatsapp(),
+      'canal' => $citaCreada->getCanal(),
+      'cliente' => [
+        'id' => $clienteCreado->getId(),
+        'nombre' => $clienteCreado->getNombreCompleto(),
+        'telefono' => $telefonoNormalizado
+      ],
+      'servicio' => [
+        'id' => $servicio->getId(),
+        'nombre' => $servicio->getNombre(),
+        'duracion_minutos' => $servicio->getDuracionMinutos(),
+        'precio' => $servicio->getPrecio()
+      ],
+      'fecha_cita' => $fechaCita,
+      'hora_inicio' => substr($horaInicioNorm, 0, 5),
+      'hora_fin' => substr($horaFinNorm, 0, 5),
       'mensaje_whatsapp' => $mensajeWhatsapp,
       'whatsapp_url' => $whatsappUrl
     ];
