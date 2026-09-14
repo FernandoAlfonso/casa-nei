@@ -141,9 +141,10 @@ class CitaRepository
    */
   public function buscarPorId(int $id): ?Cita
   {
+    $extraCols = $this->tieneColumnasExtendidas() ? ', tiene_whatsapp, canal' : '';
     $sql = "SELECT id, codigo_cita, cliente_id, servicio_id, fecha_cita,
                    hora_inicio, hora_fin, estado, notas_cliente, notas_admin,
-                   created_at, updated_at
+                   created_at, updated_at{$extraCols}
             FROM citas
             WHERE id = ?
             LIMIT 1";
@@ -160,9 +161,10 @@ class CitaRepository
    */
   public function buscarPorCodigo(string $codigoCita): ?Cita
   {
+    $extraCols = $this->tieneColumnasExtendidas() ? ', tiene_whatsapp, canal' : '';
     $sql = "SELECT id, codigo_cita, cliente_id, servicio_id, fecha_cita,
                    hora_inicio, hora_fin, estado, notas_cliente, notas_admin,
-                   created_at, updated_at
+                   created_at, updated_at{$extraCols}
             FROM citas
             WHERE codigo_cita = ?
             LIMIT 1";

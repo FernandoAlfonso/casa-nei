@@ -9,23 +9,71 @@ use App\Agenda\Services\DisponibilidadService;
 use App\Shared\Http\Request;
 use App\Shared\Http\Response;
 use Exception;
+use Throwable;
 
 /**
- * AgendaController - Controlador para manejar las peticiones HTTP del módulo de Agenda.
+ * Class AgendaController
+ *
+ * Controlador HTTP para el módulo de Agenda y Citas de Casa Nei.
+ * Expone endpoints REST para:
+ * - Catálogo de servicios activos.
+ * - Calendario de disponibilidad en tiempo real.
+ * - Horarios libres por día.
+ * - Consulta de clientes (Blind Index).
+ * - Agendado de citas con concurrencia y transacciones atómicas.
+ * - Panel administrativo (consulta, confirmación, cancelación y reprogramación).
+ *
+ * @package App\Agenda\Controllers
  */
 class AgendaController
 {
+  /**
+   * Servicio principal de gestión de agenda y casos de uso de reservas.
+   */
+  private AgendaService $agendaService;
+
+  /**
+   * Servicio de cálculo de disponibilidad de fechas y slots horarios.
+   */
+  private DisponibilidadService $disponibilidadService;
+
+  /**
+   * Repositorio de catálogo de servicios.
+   */
+  private ServicioRepository $servicioRepo;
+
+  /**
+   * Repositorio de citas y reservas.
+   */
+  private CitaRepository $citaRepo;
+
+  /**
+   * Constructor con soporte de inyección de dependencias.
+   *
+   * @param AgendaService|null $agendaService
+   * @param DisponibilidadService|null $disponibilidadService
+   * @param ServicioRepository|null $servicioRepo
+   * @param CitaRepository|null $citaRepo
+   */
   public function __construct(
-    private AgendaService $agendaService = new AgendaService(),
-    private DisponibilidadService $disponibilidadService = new DisponibilidadService(),
-    private ServicioRepository $servicioRepo = new ServicioRepository(),
-    private CitaRepository $citaRepo = new CitaRepository()
+    ?AgendaService $agendaService = null,
+    ?DisponibilidadService $disponibilidadService = null,
+    ?ServicioRepository $servicioRepo = null,
+    ?CitaRepository $citaRepo = null
   ) {
+    $this->agendaService = $agendaService ?? new AgendaService();
+    $this->disponibilidadService = $disponibilidadService ?? new DisponibilidadService();
+    $this->servicioRepo = $servicioRepo ?? new ServicioRepository();
+    $this->citaRepo = $citaRepo ?? new CitaRepository();
   }
 
   /**
    * GET /api/servicios
-   * Retorna el catálogo de servicios activos con precios y duración.
+   *
+   * Retorna el catálogo de servicios activos con precios, duración en minutos e instrucciones.
+   *
+   * @param Request $request
+   * @return void
    */
   public function obtenerServicios(Request $request): void
   {
@@ -33,21 +81,25 @@ class AgendaController
       $servicios = $this->servicioRepo->obtenerActivos();
       $data = array_map(fn($s) => $s->toArray(), $servicios);
       Response::success($data, "Servicios recuperados con éxito");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
       Response::error("Error al obtener los servicios: " . $e->getMessage(), 500);
     }
   }
 
   /**
    * GET /api/calendario?fecha_desde=YYYY-MM-DD&servicio_id=1&cantidad_dias=12&solo_disponibles=1
-   * Retorna el conjunto garantizado de días disponibles para la agenda del usuario (o el calendario completo para admin).
+   *
+   * Retorna los días hábiles del calendario indicando su estado de ocupación, slots libres y bloqueos.
+   *
+   * @param Request $request
+   * @return void
    */
   public function obtenerCalendario(Request $request): void
   {
     try {
       $fechaDesde = $request->getQuery('fecha_desde');
       $servicioId = $request->getQuery('servicio_id') ? (int) $request->getQuery('servicio_id') : null;
-      
+
       // Determinar la cantidad de días solicitada (por defecto 12, equivalentes a 2 semanas completas de Lun a Sáb)
       if ($request->getQuery('cantidad_dias') !== null) {
         $cantidadDias = max(1, (int) $request->getQuery('cantidad_dias'));
@@ -69,21 +121,24 @@ class AgendaController
       }
 
       Response::success($calendario, "Calendario generado con éxito");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
       Response::error("Error al calcular el calendario: " . $e->getMessage(), 500);
     }
   }
 
-
   /**
    * GET /api/horas-disponibles?fecha=YYYY-MM-DD&servicio_id=1
+   *
    * Retorna los intervalos de horas disponibles para un día y servicio específico.
+   *
+   * @param Request $request
+   * @return void
    */
   public function obtenerHorasDisponibles(Request $request): void
   {
     try {
-      $fecha = $request->getQuery('fecha');
-      $servicioId = (int) $request->getQuery('servicio_id');
+      $fecha = (string) $request->getQuery('fecha', '');
+      $servicioId = (int) $request->getQuery('servicio_id', 0);
 
       if (empty($fecha) || $servicioId <= 0) {
         Response::error("Se requiere la fecha (YYYY-MM-DD) y el servicio_id.", 422);
@@ -91,7 +146,7 @@ class AgendaController
 
       $horas = $this->disponibilidadService->obtenerHorasDisponibles($fecha, $servicioId);
       Response::success($horas, "Horarios disponibles calculados con éxito");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
       Response::error("Error al obtener horarios disponibles: " . $e->getMessage(), 500);
     }
   }
@@ -99,7 +154,11 @@ class AgendaController
   /**
    * POST /api/cliente/consultar
    * Body: { "telefono": "3312345678" }
-   * Busca si el número ya existe para precargar el nombre y evitar duplicidad.
+   *
+   * Busca si un paciente ya existe mediante su teléfono (Blind Index) para precargar su nombre.
+   *
+   * @param Request $request
+   * @return void
    */
   public function consultarCliente(Request $request): void
   {
@@ -115,34 +174,73 @@ class AgendaController
       } else {
         Response::success($cliente, "Cliente encontrado");
       }
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
       Response::error("Error al consultar cliente: " . $e->getMessage(), 500);
     }
   }
 
   /**
    * POST /api/citas/agendar
-   * Body: { "nombre_completo", "telefono", "servicio_id", "fecha_cita", "hora_inicio", "notas_cliente", "medio_contacto" }
-   * Registra la cita y retorna el código y enlace de WhatsApp o datos de llamada telefónica.
+   * Body: {
+   *   "nombre_completo": "...",
+   *   "telefono": "...",
+   *   "servicio_id": 1,
+   *   "fecha_cita": "YYYY-MM-DD",
+   *   "hora_inicio": "HH:MM",
+   *   "notas_cliente": "...",
+   *   "medio_contacto": "whatsapp"|"llamada",
+   *   "tiene_whatsapp": bool|null,
+   *   "canal": "web"|"llamada"|"admin"
+   * }
+   *
+   * Registra una nueva solicitud de cita de forma atómica con control de concurrencia y Web Push al administrador.
+   *
+   * @param Request $request
+   * @return void
    */
   public function agendarCita(Request $request): void
   {
     try {
       $nombre = trim((string) $request->get('nombre_completo', ''));
-      $telefono = trim((string) $request->get('telefono', ''));
+      $telefonoRaw = $request->get('telefono');
+      $telefono = $telefonoRaw !== null ? trim((string) $telefonoRaw) : null;
       $servicioId = (int) $request->get('servicio_id', 0);
       $fecha = trim((string) $request->get('fecha_cita', ''));
       $hora = trim((string) $request->get('hora_inicio', ''));
       $notas = $request->get('notas_cliente');
+
+      // Medio de contacto: 'whatsapp' o 'llamada'
       $medioContactoRaw = strtolower(trim((string) $request->get('medio_contacto', 'whatsapp')));
       $medioContacto = in_array($medioContactoRaw, ['whatsapp', 'llamada'], true) ? $medioContactoRaw : 'whatsapp';
 
+      // Canal de origen: 'web', 'llamada' o 'admin'
+      $canalRaw = strtolower(trim((string) $request->get('canal', 'web')));
+      $canal = in_array($canalRaw, ['web', 'llamada', 'admin'], true) ? $canalRaw : 'web';
+
+      // Soporte explícito de tiene_whatsapp (si se envió en el payload)
+      $tieneWhatsappRaw = $request->get('tiene_whatsapp');
+      $tieneWhatsapp = null;
+      if ($tieneWhatsappRaw !== null) {
+        $tieneWhatsapp = filter_var($tieneWhatsappRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+      }
+
       $errores = [];
-      if (empty($nombre)) $errores[] = "El nombre completo es obligatorio.";
-      if (empty($telefono)) $errores[] = "El teléfono es obligatorio.";
-      if ($servicioId <= 0) $errores[] = "Debe seleccionar un servicio válido.";
-      if (empty($fecha)) $errores[] = "La fecha de la cita es obligatoria.";
-      if (empty($hora)) $errores[] = "La hora de inicio es obligatoria.";
+      if (empty($nombre)) {
+        $errores[] = "El nombre completo es obligatorio.";
+      }
+      // El teléfono es estrictamente obligatorio para reservas web públicas
+      if ($canal !== 'admin' && empty($telefono)) {
+        $errores[] = "El teléfono celular es obligatorio.";
+      }
+      if ($servicioId <= 0) {
+        $errores[] = "Debe seleccionar un servicio válido.";
+      }
+      if (empty($fecha)) {
+        $errores[] = "La fecha de la cita es obligatoria.";
+      }
+      if (empty($hora)) {
+        $errores[] = "La hora de inicio es obligatoria.";
+      }
 
       if (!empty($errores)) {
         Response::error("Datos incompletos para agendar la cita.", 422, $errores);
@@ -155,7 +253,9 @@ class AgendaController
         fechaCita: $fecha,
         horaInicio: $hora,
         notasCliente: $notas,
-        medioContacto: $medioContacto
+        medioContacto: $medioContacto,
+        tieneWhatsapp: $tieneWhatsapp,
+        canal: $canal
       );
 
       $mensajeRespuesta = $medioContacto === 'llamada'
@@ -163,21 +263,31 @@ class AgendaController
         : "Cita agendada con éxito. Procede a enviar el WhatsApp.";
 
       Response::success($resultado, $mensajeRespuesta, 201);
-    } catch (Exception $e) {
-      Response::error($e->getMessage(), 400);
+    } catch (Throwable $e) {
+      $mensaje = $e->getMessage();
+      // Si se detecta conflicto de horario concurrente, devolver HTTP 409 Conflict
+      $codigoHttp = (str_contains($mensaje, 'ya no se encuentra disponible') || str_contains($mensaje, 'conflicto'))
+        ? 409
+        : 400;
+
+      Response::error($mensaje, $codigoHttp);
     }
   }
 
   /**
    * GET /api/admin/solicitudes
-   * Retorna las citas en estado 'pendiente' para el panel administrativo.
+   *
+   * Retorna las citas en estado 'pendiente' para el panel administrativo, con teléfonos descifrados.
+   *
+   * @param Request $request
+   * @return void
    */
   public function obtenerSolicitudesAdmin(Request $request): void
   {
     try {
       $solicitudes = $this->citaRepo->obtenerSolicitudesPendientes();
       Response::success($solicitudes, "Solicitudes pendientes recuperadas con éxito");
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
       Response::error("Error al obtener solicitudes: " . $e->getMessage(), 500);
     }
   }
@@ -185,7 +295,11 @@ class AgendaController
   /**
    * POST /api/admin/citas/confirmar
    * Body: { "cita_id": 1, "mensaje_admin": "Favor de traer ropa cómoda..." }
-   * Confirma la cita y genera el enlace de WhatsApp para el paciente.
+   *
+   * Valida estado PENDIENTE, confirma la cita y genera el enlace de WhatsApp si el paciente dispone de él.
+   *
+   * @param Request $request
+   * @return void
    */
   public function confirmarCita(Request $request): void
   {
@@ -199,15 +313,27 @@ class AgendaController
 
       $resultado = $this->agendaService->confirmarCita($citaId, $mensaje);
       Response::success($resultado, "Cita confirmada con éxito");
-    } catch (Exception $e) {
-      Response::error($e->getMessage(), 400);
+    } catch (Throwable $e) {
+      $mensaje = $e->getMessage();
+      $codigoHttp = 400;
+      if (str_contains($mensaje, 'no encontrada')) {
+        $codigoHttp = 404;
+      } elseif (str_contains($mensaje, 'no se encuentra en estado') || str_contains($mensaje, 'en espera de confirmación') || str_contains($mensaje, 'conflicto')) {
+        $codigoHttp = 409;
+      }
+
+      Response::error($mensaje, $codigoHttp);
     }
   }
 
   /**
    * POST /api/admin/citas/cancelar
    * Body: { "cita_id": 1, "motivo": "Mantenimiento en instalaciones" }
-   * Cancela la cita y genera el mensaje de WhatsApp con el motivo.
+   *
+   * Cancela la cita y genera el mensaje de WhatsApp con el motivo si el paciente dispone de WhatsApp.
+   *
+   * @param Request $request
+   * @return void
    */
   public function cancelarCita(Request $request): void
   {
@@ -221,14 +347,27 @@ class AgendaController
 
       $resultado = $this->agendaService->cancelarCita($citaId, $motivo);
       Response::success($resultado, "Cita cancelada con éxito");
-    } catch (Exception $e) {
-      Response::error($e->getMessage(), 400);
+    } catch (Throwable $e) {
+      $mensaje = $e->getMessage();
+      $codigoHttp = str_contains($mensaje, 'no encontrada') ? 404 : 400;
+      Response::error($mensaje, $codigoHttp);
     }
   }
 
   /**
    * POST /api/admin/citas/actualizar
-   * Body: { "cita_id": 1, "nueva_fecha": "...", "nueva_hora": "...", "servicio_id": 2, "motivo": "..." }
+   * Body: {
+   *   "cita_id": 1,
+   *   "nueva_fecha": "YYYY-MM-DD",
+   *   "nueva_hora": "HH:MM",
+   *   "servicio_id": 2,
+   *   "motivo": "Reprogramación a solicitud del paciente"
+   * }
+   *
+   * Actualiza el horario de una cita validando días hábiles, bloqueos y conflictos de horario.
+   *
+   * @param Request $request
+   * @return void
    */
   public function actualizarCita(Request $request): void
   {
@@ -245,8 +384,16 @@ class AgendaController
 
       $resultado = $this->agendaService->actualizarCita($citaId, $nuevaFecha, $nuevaHora, $servicioId, $motivo);
       Response::success($resultado, "Cita actualizada con éxito");
-    } catch (Exception $e) {
-      Response::error($e->getMessage(), 400);
+    } catch (Throwable $e) {
+      $mensaje = $e->getMessage();
+      $codigoHttp = 400;
+      if (str_contains($mensaje, 'no encontrada')) {
+        $codigoHttp = 404;
+      } elseif (str_contains($mensaje, 'cerrado') || str_contains($mensaje, 'bloqueado') || str_contains($mensaje, 'conflicto')) {
+        $codigoHttp = 409;
+      }
+
+      Response::error($mensaje, $codigoHttp);
     }
   }
 }
