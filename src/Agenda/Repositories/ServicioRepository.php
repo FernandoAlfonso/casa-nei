@@ -6,21 +6,33 @@ use App\Agenda\Entities\Servicio;
 use App\Shared\Db\DataBase;
 
 /**
- * ServicioRepository - Repositorio para la consulta y administración de servicios disponibles.
+ * Class ServicioRepository
+ *
+ * Repositorio para la consulta, catálogo y administración de servicios y terapias en Casa Nei.
+ *
+ * @package App\Agenda\Repositories
  */
 class ServicioRepository
 {
+  /**
+   * Conexión a la base de datos MySQL.
+   */
   private DataBase $db;
 
+  /**
+   * Constructor del repositorio.
+   *
+   * @param DataBase|null $db Instancia de DataBase o Singleton.
+   */
   public function __construct(?DataBase $db = null)
   {
     $this->db = $db ?? DataBase::getInstance();
   }
 
   /**
-   * Obtiene todos los servicios activos disponibles para agendar.
+   * Obtiene todos los servicios activos disponibles para agendar citas.
    *
-   * @return Servicio[]
+   * @return Servicio[] Lista de entidades de servicios activos.
    */
   public function obtenerActivos(): array
   {
@@ -34,7 +46,10 @@ class ServicioRepository
   }
 
   /**
-   * Busca un servicio por su ID.
+   * Busca un servicio por su identificador primario.
+   *
+   * @param int $id ID del servicio.
+   * @return Servicio|null Entidad Servicio encontrada o null.
    */
   public function buscarPorId(int $id): ?Servicio
   {
@@ -48,7 +63,10 @@ class ServicioRepository
   }
 
   /**
-   * Crea un nuevo servicio en la base de datos.
+   * Crea y persiste un nuevo servicio en la base de datos.
+   *
+   * @param Servicio $servicio Entidad con los datos del servicio a registrar.
+   * @return int ID del servicio recién creado.
    */
   public function crear(Servicio $servicio): int
   {
@@ -70,7 +88,10 @@ class ServicioRepository
   }
 
   /**
-   * Actualiza los datos de un servicio.
+   * Actualiza los datos de un servicio existente.
+   *
+   * @param Servicio $servicio Entidad Servicio con datos modificados.
+   * @return bool True si se actualizó al menos una fila.
    */
   public function actualizar(Servicio $servicio): bool
   {
