@@ -4,20 +4,25 @@
  * Front Controller / Router para la API REST de Casa Nei
  */
 
-// Cargar configuración global si existe
+// Cargar configuración global según el entorno (Producción Hostgator vs Entorno Local)
 $configPath1 = dirname(__DIR__) . '/.apps/casa-nei/config.php';
 $configPath2 = dirname(__DIR__, 2) . '/src/config.php';
-if (file_exists($configPath1))
+if (file_exists($configPath1)) {
   require_once $configPath1;
-if (file_exists($configPath2))
+} elseif (file_exists($configPath2)) {
   require_once $configPath2;
+}
 
-// Carga de autoloader compatible con Entorno Local y Producción
+// Establecer zona horaria oficial del centro Casa Nei (Colima, México - UTC-6)
+date_default_timezone_set('America/Mexico_City');
+
+// Carga de autoloader PSR-4 compatible con Entorno Local y Producción
 $loaded = false;
-if (defined('DEBUG_MODE') && DEBUG_MODE)
+if (defined('DEBUG_MODE') && DEBUG_MODE) {
   $path = dirname(__DIR__, 2) . '/src/Shared/autoload.php';
-else
+} else {
   $path = dirname(__DIR__, 3) . '/.apps/casa-nei/Shared/autoload.php';
+}
 
 if (file_exists($path)) {
   require_once $path;
