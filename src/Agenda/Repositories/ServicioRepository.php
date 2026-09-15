@@ -30,7 +30,7 @@ class ServicioRepository
   }
 
   /**
-   * Obtiene todos los servicios activos disponibles para agendar citas.
+   * Obtiene todos los servicios activos disponibles para agendar citas (Entidades de Dominio).
    *
    * @return Servicio[] Lista de entidades de servicios activos.
    */
@@ -42,6 +42,33 @@ class ServicioRepository
             ORDER BY id ASC";
 
     return $this->db->fetchAll($sql, [], fn(array $r) => Servicio::fromArray($r));
+  }
+
+  /**
+   * Obtiene la proyección directa del catálogo de servicios activos para la API (CQRS Read Model).
+   * Evita la instanciación de objetos de entidad para serialización directa a JSON.
+   *
+   * @return array<int, array<string, mixed>>
+   */
+  public function obtenerCatalogoArray(): array
+  {
+    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+            FROM servicios 
+            WHERE activo = 1 
+            ORDER BY id ASC";
+
+    return $this->db->fetchAll($sql, [], function (array $r): array {
+      return [
+        'id' => (int) $r['id'],
+        'nombre' => $r['nombre'],
+        'descripcion' => $r['descripcion'] ?? null,
+        'instrucciones' => $r['instrucciones'] ?? null,
+        'duracion_minutos' => (int) ($r['duracion_minutos'] ?? 60),
+        'precio' => isset($r['precio']) ? (float) $r['precio'] : null,
+        'activo' => (int) ($r['activo'] ?? 1),
+        'created_at' => $r['created_at'] ?? null,
+      ];
+    });
   }
 
   /**

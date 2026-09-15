@@ -130,14 +130,13 @@ class AgendaService
   }
 
   /**
-   * Obtiene el catálogo completo de servicios activos en formato array para la API.
+   * Obtiene el catálogo completo de servicios activos en formato array para la API (CQRS Read Model).
    *
    * @return array<int, array<string, mixed>>
    */
   public function obtenerCatalogoServicios(): array
   {
-    $servicios = $this->servicioRepo->obtenerActivos();
-    return array_map(fn($s) => $s->toArray(), $servicios);
+    return $this->servicioRepo->obtenerCatalogoArray();
   }
 
   /**
