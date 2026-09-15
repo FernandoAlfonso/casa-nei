@@ -41,8 +41,7 @@ class ServicioRepository
             WHERE activo = 1 
             ORDER BY id ASC";
 
-    $rows = $this->db->fetchAll($sql);
-    return array_map(fn($r) => Servicio::fromArray($r), $rows);
+    return $this->db->fetchAll($sql, [], fn(array $r) => Servicio::fromArray($r));
   }
 
   /**
@@ -58,8 +57,7 @@ class ServicioRepository
             WHERE id = ? 
             LIMIT 1";
 
-    $row = $this->db->fetchOne($sql, [$id]);
-    return $row ? Servicio::fromArray($row) : null;
+    return $this->db->fetchOne($sql, [$id], fn(array $row) => Servicio::fromArray($row));
   }
 
   /**

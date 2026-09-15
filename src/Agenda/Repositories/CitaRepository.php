@@ -106,8 +106,7 @@ class CitaRepository
             WHERE id = ?
             LIMIT 1";
 
-    $row = $this->db->fetchOne($sql, [$id]);
-    return $row ? Cita::fromArray($row) : null;
+    return $this->db->fetchOne($sql, [$id], fn(array $row) => Cita::fromArray($row));
   }
 
   /**
@@ -125,8 +124,7 @@ class CitaRepository
             WHERE codigo_cita = ?
             LIMIT 1";
 
-    $row = $this->db->fetchOne($sql, [$codigoCita]);
-    return $row ? Cita::fromArray($row) : null;
+    return $this->db->fetchOne($sql, [$codigoCita], fn(array $row) => Cita::fromArray($row));
   }
 
   /**
@@ -200,18 +198,17 @@ class CitaRepository
   {
     if (empty($estados)) {
       $sql = "SELECT * FROM citas WHERE fecha_cita BETWEEN ? AND ? ORDER BY fecha_cita ASC, hora_inicio ASC";
-      $rows = $this->db->fetchAll($sql, [$fechaInicio, $fechaFin]);
-    } else {
-      $placeholders = implode(',', array_fill(0, count($estados), '?'));
-      $sql = "SELECT * FROM citas
-              WHERE fecha_cita BETWEEN ? AND ?
-                AND estado IN ({$placeholders})
-              ORDER BY fecha_cita ASC, hora_inicio ASC";
-      $params = array_merge([$fechaInicio, $fechaFin], $estados);
-      $rows = $this->db->fetchAll($sql, $params);
+      return $this->db->fetchAll($sql, [$fechaInicio, $fechaFin], fn(array $row) => Cita::fromArray($row));
     }
 
-    return array_map(fn($row) => Cita::fromArray($row), $rows);
+    $placeholders = implode(',', array_fill(0, count($estados), '?'));
+    $sql = "SELECT * FROM citas
+            WHERE fecha_cita BETWEEN ? AND ?
+              AND estado IN ({$placeholders})
+            ORDER BY fecha_cita ASC, hora_inicio ASC";
+    $params = array_merge([$fechaInicio, $fechaFin], $estados);
+
+    return $this->db->fetchAll($sql, $params, fn(array $row) => Cita::fromArray($row));
   }
 
   /**
@@ -244,8 +241,8 @@ class CitaRepository
   /**
    * Obtiene todas las solicitudes pendientes de confirmación para el panel administrativo.
    *
-   * Descifra de forma segura el teléfono del cliente a texto plano y remueve el campo binario cifrado,
-   * garantizando que la respuesta JSON no se corrompa por bytes binarios no UTF-8.
+   * Descifra de forma segura el teléfono del cliente a texto plano y remueve el campo binario cifrado
+   * en un único paso de streaming, garantizando eficiencia de memoria y respuestas limpias.
    *
    * @return array<int, array<string, mixed>>
    */
@@ -276,15 +273,11 @@ class CitaRepository
             WHERE c.estado = 'pendiente'
             ORDER BY c.fecha_cita ASC, c.hora_inicio ASC";
 
-    $rows = $this->db->fetchAll($sql);
-
-    // Descifrar número telefónico a texto plano y eliminar datos binarios crudos
-    foreach ($rows as &$row) {
+    return $this->db->fetchAll($sql, [], function (array $row): array {
       $encryptedPhone = $row['telefono_encriptado'] ?? null;
       $row['cliente_telefono'] = (!empty($encryptedPhone)) ? $this->crypto->decrypt($encryptedPhone) : null;
       unset($row['telefono_encriptado']);
-    }
-
-    return $rows;
+      return $row;
+    });
   }
 }

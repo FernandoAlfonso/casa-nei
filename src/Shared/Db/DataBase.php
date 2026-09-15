@@ -127,28 +127,45 @@ class DataBase
     }
 
     /**
-     * Obtiene todos los registros resultantes de una consulta SELECT.
+     * Obtiene todos los registros resultantes de una consulta SELECT con mapeo opcional por streaming.
+     * Evita la creación de un arreglo asociativo intermedio en memoria si se provee un mapper.
      *
-     * @param string $sql
-     * @param array $params
-     * @return array Matriz asociativa con los registros
+     * @template T
+     * @param string $sql Consulta SQL con marcadores seguros
+     * @param array<int|string, mixed> $params Parámetros vinculados
+     * @param (callable(array<string, mixed>): T)|null $mapper Función de mapeo (ej. fn($r) => Cita::fromArray($r))
+     * @return ($mapper is null ? array<int, array<string, mixed>> : list<T>)
      */
-    public function fetchAll(string $sql, array $params = []): array
+    public function fetchAll(string $sql, array $params = [], ?callable $mapper = null): array
     {
-        return $this->query($sql, $params)->fetchAll();
+        $stmt = $this->query($sql, $params);
+        if ($mapper === null) {
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        $results = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $results[] = $mapper($row);
+        }
+        return $results;
     }
 
     /**
-     * Obtiene un único registro resultante de una consulta SELECT.
+     * Obtiene un único registro resultante de una consulta SELECT con mapeo opcional.
      *
-     * @param string $sql
-     * @param array $params
-     * @return array|null Registro en formato asociativo o null si no existe
+     * @template T
+     * @param string $sql Consulta SQL con marcadores seguros
+     * @param array<int|string, mixed> $params Parámetros vinculados
+     * @param (callable(array<string, mixed>): T)|null $mapper Función de mapeo opcional
+     * @return ($mapper is null ? array<string, mixed>|null : T|null)
      */
-    public function fetchOne(string $sql, array $params = []): ?array
+    public function fetchOne(string $sql, array $params = [], ?callable $mapper = null): mixed
     {
-        $result = $this->query($sql, $params)->fetch();
-        return $result !== false ? $result : null;
+        $result = $this->query($sql, $params)->fetch(PDO::FETCH_ASSOC);
+        if ($result === false) {
+            return null;
+        }
+        return $mapper !== null ? $mapper($result) : $result;
     }
 
     /**

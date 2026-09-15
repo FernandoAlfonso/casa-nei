@@ -43,8 +43,7 @@ class HorarioRepository
             WHERE activo = 1 
             ORDER BY dia_semana ASC";
 
-    $rows = $this->db->fetchAll($sql);
-    return array_map(fn($r) => HorarioAtencion::fromArray($r), $rows);
+    return $this->db->fetchAll($sql, [], fn(array $r) => HorarioAtencion::fromArray($r));
   }
 
   /**
@@ -60,8 +59,7 @@ class HorarioRepository
             WHERE dia_semana = ? AND activo = 1 
             LIMIT 1";
 
-    $row = $this->db->fetchOne($sql, [$diaSemana]);
-    return $row ? HorarioAtencion::fromArray($row) : null;
+    return $this->db->fetchOne($sql, [$diaSemana], fn(array $row) => HorarioAtencion::fromArray($row));
   }
 
   /**
@@ -78,8 +76,7 @@ class HorarioRepository
             WHERE fecha BETWEEN ? AND ? 
             ORDER BY fecha ASC, hora_inicio ASC";
 
-    $rows = $this->db->fetchAll($sql, [$fechaInicio, $fechaFin]);
-    return array_map(fn($r) => BloqueoAgenda::fromArray($r), $rows);
+    return $this->db->fetchAll($sql, [$fechaInicio, $fechaFin], fn(array $r) => BloqueoAgenda::fromArray($r));
   }
 
   /**

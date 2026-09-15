@@ -58,12 +58,7 @@ class ClienteRepository
             WHERE telefono_hash = ? 
             LIMIT 1";
 
-    $row = $this->db->fetchOne($sql, [$hash]);
-    if (!$row) {
-      return null;
-    }
-
-    return Cliente::fromArray($row);
+    return $this->db->fetchOne($sql, [$hash], fn(array $row) => Cliente::fromArray($row));
   }
 
   /**
@@ -79,12 +74,7 @@ class ClienteRepository
             WHERE id = ? 
             LIMIT 1";
 
-    $row = $this->db->fetchOne($sql, [$id]);
-    if (!$row) {
-      return null;
-    }
-
-    return Cliente::fromArray($row);
+    return $this->db->fetchOne($sql, [$id], fn(array $row) => Cliente::fromArray($row));
   }
 
   /**
