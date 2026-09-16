@@ -4,6 +4,7 @@ namespace App\Agenda\Repositories;
 
 use App\Agenda\Entities\BloqueoAgenda;
 use App\Agenda\Entities\HorarioAtencion;
+use App\Shared\Cache\SimpleCache;
 use App\Shared\Db\DataBase;
 
 /**
@@ -11,6 +12,7 @@ use App\Shared\Db\DataBase;
  *
  * Repositorio para la consulta y administración de horarios de atención semanales
  * y bloqueos de agenda (días festivos, vacaciones, descansos extraordinarios).
+ * Cuenta con integración de caché ligero (SimpleCache) para horarios estáticos semanales.
  *
  * @package App\Agenda\Repositories
  */
@@ -32,28 +34,49 @@ class HorarioRepository
   }
 
   /**
+   * Invalida los datos cacheados de horarios semanales.
+   *
+   * @return void
+   */
+  public function invalidarCache(): void
+  {
+    SimpleCache::forget('horarios_semanales_raw');
+  }
+
+  /**
    * Obtiene la lista de horarios semanales activos (ordenados de Domingo a Sábado).
    *
    * @return HorarioAtencion[] Arreglo de entidades HorarioAtencion activas.
    */
   public function obtenerHorariosSemanales(): array
   {
-    $sql = "SELECT id, dia_semana, hora_inicio, hora_fin, activo 
-            FROM horarios_atencion 
-            WHERE activo = 1 
-            ORDER BY dia_semana ASC";
+    $rows = SimpleCache::remember('horarios_semanales_raw', 3600, function () {
+      $sql = "SELECT id, dia_semana, hora_inicio, hora_fin, activo 
+              FROM horarios_atencion 
+              WHERE activo = 1 
+              ORDER BY dia_semana ASC";
+      return $this->db->fetchAll($sql);
+    });
 
-    return $this->db->fetchAll($sql, [], fn(array $r) => HorarioAtencion::fromArray($r));
+    return array_map(fn(array $r) => HorarioAtencion::fromArray($r), $rows);
   }
 
   /**
    * Obtiene el horario de atención para un día de la semana específico (0=Domingo, 1=Lunes, ...).
+   * Consulta primero los horarios semanales en memoria/disco antes de recurrir a la base de datos.
    *
    * @param int $diaSemana Número de día de la semana (0 a 6).
    * @return HorarioAtencion|null Entidad HorarioAtencion si labora ese día o null si no labora.
    */
   public function obtenerPorDiaSemana(int $diaSemana): ?HorarioAtencion
   {
+    $horarios = $this->obtenerHorariosSemanales();
+    foreach ($horarios as $h) {
+      if ($h->getDiaSemana() === $diaSemana) {
+        return $h;
+      }
+    }
+
     $sql = "SELECT id, dia_semana, hora_inicio, hora_fin, activo 
             FROM horarios_atencion 
             WHERE dia_semana = ? AND activo = 1 

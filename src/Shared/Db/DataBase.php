@@ -21,11 +21,9 @@ class DataBase
 
     /**
      * Constructor privado para evitar instanciación directa (Singleton).
+     * La conexión PDO se inicializa de forma diferida (Lazy Loading) al ejecutar la primera consulta.
      */
-    private function __construct()
-    {
-        $this->connect();
-    }
+    private function __construct() {}
 
     /**
      * Previene la clonación de la instancia.

@@ -3,3 +3,4 @@ src/config.php
 src/Shared/db/schema.sql
 .ai
 src/Shared/Security/storage/
+src/Shared/Cache/storage/

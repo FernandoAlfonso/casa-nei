@@ -3,12 +3,14 @@
 namespace App\Agenda\Repositories;
 
 use App\Agenda\Entities\Servicio;
+use App\Shared\Cache\SimpleCache;
 use App\Shared\Db\DataBase;
 
 /**
  * Class ServicioRepository
  *
  * Repositorio para la consulta, catálogo y administración de servicios y terapias en Casa Nei.
+ * Cuenta con integración de caché ligero de dos niveles (SimpleCache) para eliminar consultas remotas redundantes.
  *
  * @package App\Agenda\Repositories
  */
@@ -30,18 +32,32 @@ class ServicioRepository
   }
 
   /**
+   * Invalida los datos cacheados del catálogo de servicios.
+   *
+   * @return void
+   */
+  public function invalidarCache(): void
+  {
+    SimpleCache::forget('servicios_activos_raw');
+    SimpleCache::forget('servicios_catalogo_array');
+  }
+
+  /**
    * Obtiene todos los servicios activos disponibles para agendar citas (Entidades de Dominio).
    *
    * @return Servicio[] Lista de entidades de servicios activos.
    */
   public function obtenerActivos(): array
   {
-    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
-            FROM servicios 
-            WHERE activo = 1 
-            ORDER BY id ASC";
+    $rows = SimpleCache::remember('servicios_activos_raw', 3600, function () {
+      $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+              FROM servicios 
+              WHERE activo = 1 
+              ORDER BY id ASC";
+      return $this->db->fetchAll($sql);
+    });
 
-    return $this->db->fetchAll($sql, [], fn(array $r) => Servicio::fromArray($r));
+    return array_map(fn(array $r) => Servicio::fromArray($r), $rows);
   }
 
   /**
@@ -52,33 +68,43 @@ class ServicioRepository
    */
   public function obtenerCatalogoArray(): array
   {
-    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
-            FROM servicios 
-            WHERE activo = 1 
-            ORDER BY id ASC";
+    return SimpleCache::remember('servicios_catalogo_array', 3600, function () {
+      $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+              FROM servicios 
+              WHERE activo = 1 
+              ORDER BY id ASC";
 
-    return $this->db->fetchAll($sql, [], function (array $r): array {
-      return [
-        'id' => (int) $r['id'],
-        'nombre' => $r['nombre'],
-        'descripcion' => $r['descripcion'] ?? null,
-        'instrucciones' => $r['instrucciones'] ?? null,
-        'duracion_minutos' => (int) ($r['duracion_minutos'] ?? 60),
-        'precio' => isset($r['precio']) ? (float) $r['precio'] : null,
-        'activo' => (int) ($r['activo'] ?? 1),
-        'created_at' => $r['created_at'] ?? null,
-      ];
+      return $this->db->fetchAll($sql, [], function (array $r): array {
+        return [
+          'id' => (int) $r['id'],
+          'nombre' => $r['nombre'],
+          'descripcion' => $r['descripcion'] ?? null,
+          'instrucciones' => $r['instrucciones'] ?? null,
+          'duracion_minutos' => (int) ($r['duracion_minutos'] ?? 60),
+          'precio' => isset($r['precio']) ? (float) $r['precio'] : null,
+          'activo' => (int) ($r['activo'] ?? 1),
+          'created_at' => $r['created_at'] ?? null,
+        ];
+      });
     });
   }
 
   /**
    * Busca un servicio por su identificador primario.
+   * Consulta primero la caché en memoria/disco; si no se localiza, recurre a la base de datos.
    *
    * @param int $id ID del servicio.
    * @return Servicio|null Entidad Servicio encontrada o null.
    */
   public function buscarPorId(int $id): ?Servicio
   {
+    $activos = $this->obtenerActivos();
+    foreach ($activos as $s) {
+      if ($s->getId() === $id) {
+        return $s;
+      }
+    }
+
     $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
             FROM servicios 
             WHERE id = ? 
@@ -88,7 +114,7 @@ class ServicioRepository
   }
 
   /**
-   * Crea y persiste un nuevo servicio en la base de datos.
+   * Crea y persiste un nuevo servicio en la base de datos, invalidando la caché.
    *
    * @param Servicio $servicio Entidad con los datos del servicio a registrar.
    * @return int ID del servicio recién creado.
@@ -109,11 +135,12 @@ class ServicioRepository
 
     $id = (int) $this->db->lastInsertId();
     $servicio->setId($id);
+    $this->invalidarCache();
     return $id;
   }
 
   /**
-   * Actualiza los datos de un servicio existente.
+   * Actualiza los datos de un servicio existente, invalidando la caché.
    *
    * @param Servicio $servicio Entidad Servicio con datos modificados.
    * @return bool True si se actualizó al menos una fila.
@@ -124,7 +151,7 @@ class ServicioRepository
             SET nombre = ?, descripcion = ?, instrucciones = ?, duracion_minutos = ?, precio = ?, activo = ? 
             WHERE id = ?";
 
-    return $this->db->execute($sql, [
+    $actualizado = $this->db->execute($sql, [
       $servicio->getNombre(),
       $servicio->getDescripcion(),
       $servicio->getInstrucciones(),
@@ -133,5 +160,11 @@ class ServicioRepository
       $servicio->isActivo() ? 1 : 0,
       $servicio->getId()
     ]) > 0;
+
+    if ($actualizado) {
+      $this->invalidarCache();
+    }
+
+    return $actualizado;
   }
 }
