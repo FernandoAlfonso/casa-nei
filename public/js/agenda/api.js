@@ -51,7 +51,7 @@
  * @property {string} fecha_cita
  * @property {string} hora_inicio
  * @property {string} [notas_cliente]
- * @property {'whatsapp'|'llamada'} [medio_contacto]
+ * @property {'whatsapp'} [medio_contacto]
  */
 
 /**
@@ -63,7 +63,7 @@
  * @property {string} hora_inicio
  * @property {Servicio} servicio
  * @property {Cliente} cliente
- * @property {'whatsapp'|'llamada'} [medio_contacto]
+ * @property {'whatsapp'} [medio_contacto]
  * @property {string|null} [whatsapp_url]
  * @property {string} [telefono_admin]
  */

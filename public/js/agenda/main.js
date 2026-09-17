@@ -462,7 +462,6 @@ export class AgendaApp {
     const state = this.store.getState();
     const submitBtn = this.container.querySelector('#btn-submit-cita');
     const errorBox = this.container.querySelector('#form-error-box');
-    const medioContacto = formData.medio_contacto || 'whatsapp';
 
     if (!state.servicioSeleccionado || !state.fechaSeleccionada || !state.horaSeleccionada) {
       if (errorBox) {
@@ -474,9 +473,7 @@ export class AgendaApp {
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = medioContacto === 'llamada'
-        ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Agendando tu cita...'
-        : '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Agendando y preparando WhatsApp...';
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Agendando y preparando WhatsApp...';
     }
 
     try {
@@ -487,7 +484,7 @@ export class AgendaApp {
         fecha_cita: state.fechaSeleccionada,
         hora_inicio: state.horaSeleccionada.hora_inicio_completa,
         notas_cliente: formData.notas,
-        medio_contacto: medioContacto
+        medio_contacto: 'whatsapp'
       };
 
       const citaResponse = await this.api.agendarCita(payload);
@@ -502,9 +499,7 @@ export class AgendaApp {
       }
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = medioContacto === 'llamada'
-          ? '<i class="fas fa-phone-alt" aria-hidden="true"></i> Agendar y Confirmar por Llamada'
-          : '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Generar WhatsApp';
+        submitBtn.innerHTML = '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Abrir WhatsApp';
       }
     }
   }

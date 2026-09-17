@@ -7,7 +7,7 @@ import { escapeHtml, isSafeWhatsAppUrl } from '../utils/sanitizer.js';
 import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
 
 /**
- * Renderiza la pantalla de confirmación exitosa con enlace a WhatsApp o llamada telefónica.
+ * Renderiza la pantalla de confirmación exitosa con enlace directo a WhatsApp.
  * @param {import('../api.js').CitaResponse} data - Información de la cita registrada.
  * @returns {string} Markup HTML accesible.
  */
@@ -16,52 +16,7 @@ export function renderSuccessView(data) {
   const servicioNombre = escapeHtml(data.servicio?.nombre || 'Consulta');
   const fechaTexto = formatDateLegible(data.fecha_cita);
   const horaTexto = formatTimeAmPm(data.hora_inicio || '');
-  const esLlamada = data.medio_contacto === 'llamada' || !data.whatsapp_url;
   const safeUrl = isSafeWhatsAppUrl(data.whatsapp_url) ? data.whatsapp_url : '#';
-
-  if (esLlamada) {
-    return `
-      <div class="agenda-success-card animate-fade-in" role="region" aria-label="Confirmación de cita vía llamada">
-        <div class="success-icon call-success-icon" aria-hidden="true">
-          <i class="fas fa-phone-alt"></i>
-        </div>
-
-        <h2>¡Cita Registrada con Éxito!</h2>
-        <p class="success-code">Código de Seguimiento: <strong>${codigo}</strong></p>
-
-        <p class="success-desc">
-          Tu solicitud para <strong>${servicioNombre}</strong> el día 
-          <strong>${fechaTexto}</strong> a las <strong>${horaTexto}</strong> 
-          ha sido registrada en el sistema.
-        </p>
-
-        <!-- Caja de acción de Llamada Telefónica -->
-        <div class="call-action-box">
-          <p class="action-instruction">
-            <i class="fas fa-info-circle" aria-hidden="true"></i> 
-            Como elegiste confirmación por llamada, comunícate directamente con el terapeuta pulsando el botón a continuación:
-          </p>
-
-          <a href="tel:+523121064455" 
-             id="btn-llamar-directo"
-             class="btn-primary btn-call-action"
-             aria-label="Llamar al terapeuta de Casa Nei al 312 106 4455">
-            <i class="fas fa-phone-alt" aria-hidden="true"></i> Llamar al Terapeuta (+52 312 106 4455)
-          </a>
-
-          <p class="call-notice">
-            <i class="fas fa-clock" aria-hidden="true"></i> Horario de llamadas: Lunes a Viernes 9am - 1pm y 6pm - 9pm, Sábados 10am - 2pm.
-          </p>
-        </div>
-
-        <div style="margin-top: 2rem;">
-          <button type="button" class="btn-secondary" id="btn-agendar-otra">
-            <i class="fas fa-calendar-plus" aria-hidden="true"></i> Agendar otra cita
-          </button>
-        </div>
-      </div>
-    `;
-  }
 
   return `
     <div class="agenda-success-card animate-fade-in" role="region" aria-label="Confirmación de cita registrada">

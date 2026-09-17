@@ -86,52 +86,15 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
           <h4><i class="fas fa-user-edit" aria-hidden="true"></i> Completa tus datos</h4>
           <p class="form-desc">Ingresa tus datos para registrar tu espacio y confirmar tu atención.</p>
 
-          <!-- Atajo directo para agendar por llamada telefónica -->
-          <div class="no-whatsapp-banner" role="complementary">
-            <div class="banner-text">
-              <i class="fas fa-phone-volume" aria-hidden="true"></i>
-              <span>¿No tienes WhatsApp o prefieres agendar por llamada?</span>
-            </div>
-            <a href="tel:+523121064455" class="btn-call-shortcut" aria-label="Llamar directamente al 312 106 4455">
-              <i class="fas fa-phone-alt" aria-hidden="true"></i> Llamar al (312) 106-4455
-            </a>
-          </div>
-
           <!-- Banner de error accesible -->
           <div id="form-error-box" class="agenda-alert error" style="display: none;" role="alert"></div>
 
           <form id="form-agendar-cita" novalidate>
-            
-            <!-- Selector de Preferencia de Confirmación -->
-            <div class="form-group contact-method-group">
-              <label class="contact-method-title">
-                <i class="fas fa-paper-plane" aria-hidden="true"></i> ¿Cómo prefieres confirmar tu cita? <span class="req" aria-hidden="true">*</span>
-              </label>
-              <div class="contact-options-grid" role="radiogroup" aria-label="Preferencia de contacto">
-                <label class="contact-option-card selected" id="opt-method-whatsapp">
-                  <input type="radio" name="medio_contacto" value="whatsapp" checked>
-                  <span class="option-icon"><i class="fab fa-whatsapp" aria-hidden="true"></i></span>
-                  <span class="option-info">
-                    <strong>Vía WhatsApp</strong>
-                    <small>Recomendado • Mensaje precargado</small>
-                  </span>
-                </label>
 
-                <label class="contact-option-card" id="opt-method-llamada">
-                  <input type="radio" name="medio_contacto" value="llamada">
-                  <span class="option-icon phone-icon"><i class="fas fa-phone-alt" aria-hidden="true"></i></span>
-                  <span class="option-info">
-                    <strong>Vía Llamada Celular</strong>
-                    <small>Si no cuentas con WhatsApp</small>
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Campo: Celular -->
+            <!-- Campo: Celular con WhatsApp -->
             <div class="form-group">
               <label for="paciente_telefono" id="label-telefono">
-                <i class="fas fa-mobile-alt" aria-hidden="true"></i> Número de Celular <span class="req" aria-hidden="true">*</span>
+                <i class="fab fa-whatsapp" aria-hidden="true"></i> Número de Celular con WhatsApp <span class="req" aria-hidden="true">*</span>
               </label>
               <div class="input-relative-wrapper">
                 <input type="tel" 
@@ -148,7 +111,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
                 </span>
               </div>
               <small id="telefono-hint" class="form-hint">
-                Se usará para autocompletar tus datos si ya eres paciente y coordinar tu cita.
+                Número a 10 dígitos. Recibirás tu confirmación y enlace directo por WhatsApp.
               </small>
             </div>
 
@@ -204,8 +167,8 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
                     class="btn-primary btn-submit-agenda"
                     ${submitting ? 'disabled' : ''}>
               ${submitting 
-                ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Procesando tu cita...' 
-                : '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Generar WhatsApp'}
+                ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Agendando y preparando WhatsApp...' 
+                : '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Abrir WhatsApp'}
             </button>
 
             <p class="form-disclaimer">
@@ -225,7 +188,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
  * Asocia los escuchadores de eventos para el formulario de citas.
  * @param {HTMLElement} container - Contenedor raíz.
  * @param {function(string): void} onPhoneLookup - Callback para consultar cliente al escribir 10 dígitos.
- * @param {function({ nombre: string, telefono: string, notas: string, medio_contacto: string }): void} onSubmit - Callback de envío con datos limpios.
+ * @param {function({ nombre: string, telefono: string, notas: string, medio_contacto?: string }): void} onSubmit - Callback de envío con datos limpios.
  * @param {function(): void} onChangeFechaHora - Callback al pulsar "Cambiar fecha u horario".
  */
 export function attachFormListeners(container, onPhoneLookup, onSubmit, onChangeFechaHora) {
@@ -240,31 +203,6 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
   const errorBox = container.querySelector('#form-error-box');
   const form = container.querySelector('#form-agendar-cita');
   const submitBtn = container.querySelector('#btn-submit-cita');
-
-  // Control interactivo del método de contacto (WhatsApp vs Llamada)
-  const radioMethodWhatsApp = container.querySelector('input[name="medio_contacto"][value="whatsapp"]');
-  const radioMethodLlamada = container.querySelector('input[name="medio_contacto"][value="llamada"]');
-  const cardWhatsApp = container.querySelector('#opt-method-whatsapp');
-  const cardLlamada = container.querySelector('#opt-method-llamada');
-
-  function updateMethodUI(method) {
-    if (method === 'llamada') {
-      cardLlamada?.classList.add('selected');
-      cardWhatsApp?.classList.remove('selected');
-      if (submitBtn) {
-        submitBtn.innerHTML = '<i class="fas fa-phone-alt" aria-hidden="true"></i> Agendar y Confirmar por Llamada';
-      }
-    } else {
-      cardWhatsApp?.classList.add('selected');
-      cardLlamada?.classList.remove('selected');
-      if (submitBtn) {
-        submitBtn.innerHTML = '<i class="fab fa-whatsapp" aria-hidden="true"></i> Confirmar y Generar WhatsApp';
-      }
-    }
-  }
-
-  radioMethodWhatsApp?.addEventListener('change', () => updateMethodUI('whatsapp'));
-  radioMethodLlamada?.addEventListener('change', () => updateMethodUI('llamada'));
 
   // Búsqueda automática de cliente por teléfono con notificación y loader
   let debounceTimer = null;
@@ -311,9 +249,6 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
       const rawTelefono = inputTelefono ? inputTelefono.value : '';
       const rawNombre = inputNombre ? inputNombre.value : '';
       const rawNotas = inputNotas ? inputNotas.value : '';
-      const selectedMethodInput = form.querySelector('input[name="medio_contacto"]:checked');
-      const medioContacto = selectedMethodInput ? selectedMethodInput.value : 'whatsapp';
-
       const cleanPhone = sanitizePhone(rawTelefono);
       const cleanNombre = rawNombre.trim();
       const cleanNotas = rawNotas.trim();
@@ -336,7 +271,7 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
           nombre: cleanNombre,
           telefono: cleanPhone,
           notas: cleanNotas,
-          medio_contacto: medioContacto
+          medio_contacto: 'whatsapp'
         });
       }
     });
