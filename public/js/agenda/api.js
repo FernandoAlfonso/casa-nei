@@ -68,11 +68,25 @@
  * @property {string} [telefono_admin]
  */
 
+/**
+ * Detecta dinámicamente la ruta base de la API REST según el entorno y ruta actual del navegador.
+ * Si se ejecuta bajo la subcarpeta /casa-nei (como en producción cPanel), retorna '/casa-nei/api'.
+ * En caso contrario (como en desarrollo local http://localhost:8000), retorna '/api'.
+ *
+ * @returns {string} Ruta base relativa de la API.
+ */
+export function getApiBase() {
+  if (typeof window !== 'undefined' && window.location && window.location.pathname.startsWith('/casa-nei')) {
+    return '/casa-nei/api';
+  }
+  return '/api';
+}
+
 export class AgendaApi {
   /**
-   * @param {string} [baseUrl='/api'] - Ruta base de la API REST.
+   * @param {string} [baseUrl] - Ruta base de la API REST (por defecto detectada con getApiBase()).
    */
-  constructor(baseUrl = '/api') {
+  constructor(baseUrl = getApiBase()) {
     this.baseUrl = baseUrl;
   }
 

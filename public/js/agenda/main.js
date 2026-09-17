@@ -4,7 +4,7 @@
  * @module main
  */
 
-import { AgendaApi } from './api.js';
+import { AgendaApi, getApiBase } from './api.js';
 import { AgendaStore } from './store.js';
 import { renderStepsBar, attachStepsBarListeners } from './components/stepsBar.js';
 import { renderServicesView, attachServicesListeners } from './components/servicesView.js';
@@ -19,9 +19,9 @@ import { initNavbarScroll } from './utils/navbar.js';
 export class AgendaApp {
   /**
    * @param {string} containerId - ID del contenedor DOM de la agenda.
-   * @param {string} [apiBase='/api'] - Ruta base de la API REST.
+   * @param {string} [apiBase] - Ruta base de la API REST (por defecto detectada con getApiBase()).
    */
-  constructor(containerId = 'agenda-flow-container', apiBase = '/api') {
+  constructor(containerId = 'agenda-flow-container', apiBase = getApiBase()) {
     this.container = document.getElementById(containerId);
     if (!this.container) {
       console.warn(`[AgendaApp] No se encontró el contenedor con ID "${containerId}".`);
