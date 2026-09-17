@@ -273,20 +273,33 @@ export class AgendaApp {
 
 
   /**
-   * Maneja la selección de una fecha y descarga las horas disponibles (Paso 3).
-   * Posiciona de inmediato la vista para que el loader sea visible y no caiga al pie de página.
+   * Maneja la selección de una fecha y visualiza las horas disponibles (Paso 3).
+   * Si los slots ya vinieron precargados en el calendario (con_slots=1), la transición es instantánea (0 ms).
+   * De lo contrario, descarga los horarios con indicador de carga como respaldo.
    * @param {string} fecha - Formato YYYY-MM-DD
    */
   async handleSelectFecha(fecha) {
-    const servicio = this.store.getState().servicioSeleccionado;
+    const state = this.store.getState();
+    const servicio = state.servicioSeleccionado;
     if (!servicio) {
       this.store.setStep(1);
       scrollToAgendaTop('agenda-flow-container');
       return;
     }
 
-    this.store.selectFecha(fecha);
-    // Desplazar inmediatamente para enfocar el loader de horarios
+    // 1. Verificar si el día ya cuenta con slots precargados en el estado local
+    const diaEnCalendario = (state.calendario || []).find((d) => d.fecha === fecha);
+    const tieneSlotsPrecargados = diaEnCalendario && Array.isArray(diaEnCalendario.slots) && diaEnCalendario.slots.length > 0;
+
+    if (tieneSlotsPrecargados) {
+      // Transición instantánea a 0 ms sin viaje de red ni spinner
+      this.store.selectFecha(fecha, diaEnCalendario.slots);
+      scrollToAgendaTop('agenda-flow-container');
+      return;
+    }
+
+    // 2. Fallback: descarga asíncrona si no vinieran slots precargados
+    this.store.selectFecha(fecha, []);
     scrollToAgendaTop('agenda-flow-container');
     this.store.setLoading(true, 'Cargando horarios disponibles...');
 

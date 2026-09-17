@@ -148,14 +148,16 @@ export class AgendaStore {
   }
 
   /**
-   * Selecciona una fecha y avanza al paso 3 (Horario).
+   * Selecciona una fecha y avanza al paso 3 (Horario), precargando slots si existen.
    * @param {string} fecha - Formato YYYY-MM-DD
+   * @param {import('./api.js').SlotHora[]} [horasPrecalculadas=[]] - Horarios precargados del día
    */
-  selectFecha(fecha) {
+  selectFecha(fecha, horasPrecalculadas = []) {
     this._state.fechaSeleccionada = fecha;
     this._state.horaSeleccionada = null;
-    this._state.horasDisponibles = [];
+    this._state.horasDisponibles = Array.isArray(horasPrecalculadas) ? horasPrecalculadas : [];
     this._state.step = 3;
+    this._state.loading = false;
     this._state.error = null;
     this._notify();
   }

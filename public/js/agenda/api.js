@@ -15,13 +15,14 @@
  */
 
 /**
- * @typedef {Object} DiaCalendario
+   * @typedef {Object} DiaCalendario
  * @property {string} fecha - Formato YYYY-MM-DD
  * @property {number} dia_semana - 0=Dom, 1=Lun, ..., 6=Sáb
  * @property {'disponible'|'ocupado'|'bloqueado'|'cerrado'} estado
  * @property {string|null} motivo
  * @property {number} slots_libres
  * @property {boolean} tiene_pendientes
+ * @property {SlotHora[]} [slots] - Horarios precalculados para visualización instantánea (con_slots=1)
  */
 
 /**
@@ -30,6 +31,9 @@
  * @property {string} hora_fin - Formato HH:MM
  * @property {string} hora_inicio_completa - Formato HH:MM:SS
  * @property {string} hora_fin_completa - Formato HH:MM:SS
+ * @property {string} [hora_inicio_formato] - Formato amigable 12h (ej. 9am, 9:30am)
+ * @property {string} [hora_fin_formato] - Formato amigable 12h (ej. 10am, 10:30am)
+ * @property {string} [etiqueta] - Etiqueta amigable de rango (ej. "9am - 10am")
  */
 
 /**
@@ -125,14 +129,18 @@ export class AgendaApi {
    * @param {number} servicioId - ID del servicio seleccionado.
    * @param {number} [cantidadDias=12] - Cantidad de días netos disponibles (por defecto 12, 2 semanas completas Lun-Sáb).
    * @param {string|null} [fechaDesde=null] - Fecha inicial en formato YYYY-MM-DD.
+   * @param {boolean} [conSlots=true] - Si es true, precarga los horarios de cada día para navegación instantánea a 0 ms.
    * @returns {Promise<DiaCalendario[]>}
    */
-  async obtenerCalendario(servicioId, cantidadDias = 12, fechaDesde = null) {
+  async obtenerCalendario(servicioId, cantidadDias = 12, fechaDesde = null, conSlots = true) {
     const params = new URLSearchParams({
       servicio_id: String(servicioId),
       cantidad_dias: String(cantidadDias),
       solo_disponibles: '1'
     });
+    if (conSlots) {
+      params.append('con_slots', '1');
+    }
     if (fechaDesde) {
       params.append('fecha_desde', fechaDesde);
     }
