@@ -171,19 +171,17 @@ class AgendaController
    * POST /api/citas/agendar
    * Body: {
    *   "nombre_completo": "...",
-   *   "telefono": "...",
+   *   "telefono": "3121064455",
    *   "servicio_id": 1,
    *   "fecha_cita": "YYYY-MM-DD",
    *   "hora_inicio": "HH:MM",
-   *   "notas_cliente": "...",
-   *   "medio_contacto": "whatsapp"|"llamada",
-   *   "tiene_whatsapp": bool|null,
-   *   "canal": "web"|"llamada"|"admin"
+   *   "notas_cliente": "..."
    * }
    *
-   * Registra una nueva solicitud de cita de forma atómica con control de concurrencia y Web Push al administrador.
+   * Registra una nueva solicitud de cita web pública exclusiva por WhatsApp
+   * de forma atómica con control de concurrencia y Web Push al administrador.
    *
-   * @param Request $request
+   * @param Request $request Petición HTTP entrante con los datos de la cita.
    * @return void
    */
   public function agendarCita(Request $request): void
@@ -197,29 +195,22 @@ class AgendaController
       $hora = trim((string) $request->get('hora_inicio', ''));
       $notas = $request->get('notas_cliente');
 
-      // Medio de contacto: 'whatsapp' o 'llamada'
-      $medioContactoRaw = strtolower(trim((string) $request->get('medio_contacto', 'whatsapp')));
-      $medioContacto = in_array($medioContactoRaw, ['whatsapp', 'llamada'], true) ? $medioContactoRaw : 'whatsapp';
-
-      // Canal de origen: 'web', 'llamada' o 'admin'
-      $canalRaw = strtolower(trim((string) $request->get('canal', 'web')));
-      $canal = in_array($canalRaw, ['web', 'llamada', 'admin'], true) ? $canalRaw : 'web';
-
-      // Soporte explícito de tiene_whatsapp (si se envió en el payload)
-      $tieneWhatsappRaw = $request->get('tiene_whatsapp');
-      $tieneWhatsapp = null;
-      if ($tieneWhatsappRaw !== null) {
-        $tieneWhatsapp = filter_var($tieneWhatsappRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-      }
+      // Política exclusiva web: Toda reserva originada en la web opera por WhatsApp
+      $medioContacto = 'whatsapp';
+      $canal = 'web';
+      $tieneWhatsapp = true;
 
       $errores = [];
       if (empty($nombre)) {
         $errores[] = "El nombre completo es obligatorio.";
       }
-      // El teléfono es estrictamente obligatorio para reservas web públicas
-      if ($canal !== 'admin' && empty($telefono)) {
-        $errores[] = "El teléfono celular es obligatorio.";
+
+      // El celular con WhatsApp es estrictamente obligatorio (10 dígitos numéricos)
+      $telefonoLimpio = $telefono !== null ? preg_replace('/[^0-9]/', '', $telefono) : '';
+      if (empty($telefonoLimpio) || strlen($telefonoLimpio) !== 10) {
+        $errores[] = "El número celular con WhatsApp es obligatorio y debe contener 10 dígitos.";
       }
+
       if ($servicioId <= 0) {
         $errores[] = "Debe seleccionar un servicio válido.";
       }
@@ -236,7 +227,7 @@ class AgendaController
 
       $resultado = $this->agendaService->agendarCita(
         nombreCompleto: $nombre,
-        telefono: $telefono,
+        telefono: $telefonoLimpio,
         servicioId: $servicioId,
         fechaCita: $fecha,
         horaInicio: $hora,
@@ -246,11 +237,11 @@ class AgendaController
         canal: $canal
       );
 
-      $mensajeRespuesta = $medioContacto === 'llamada'
-        ? "Cita agendada con éxito. Procede a comunicarte por llamada telefónica."
-        : "Cita agendada con éxito. Procede a enviar el WhatsApp.";
-
-      Response::success($resultado, $mensajeRespuesta, 201);
+      Response::success(
+        $resultado,
+        "Cita agendada con éxito. Procede a enviar el mensaje por WhatsApp.",
+        201
+      );
     } catch (Throwable $e) {
       $mensaje = $e->getMessage();
       // Si se detecta conflicto de horario concurrente, devolver HTTP 409 Conflict

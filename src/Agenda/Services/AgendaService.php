@@ -168,9 +168,9 @@ class AgendaService
    * @param string $fechaCita Fecha en formato YYYY-MM-DD.
    * @param string $horaInicio Hora de inicio en formato HH:MM o HH:MM:SS.
    * @param string|null $notasCliente Motivos, síntomas o comentarios adicionales.
-   * @param string $medioContacto 'whatsapp' | 'llamada'.
-   * @param bool|null $tieneWhatsapp Indica si el paciente dispone de WhatsApp (calculado automáticamente si es null).
-   * @param string $canal 'web' | 'llamada' | 'admin'.
+   * @param string $medioContacto Exclusivamente 'whatsapp'.
+   * @param bool|null $tieneWhatsapp Indica si el paciente dispone de WhatsApp (true por defecto para web).
+   * @param string $canal Canal de origen ('web').
    * @return array<string, mixed> Resumen de la reserva creada.
    * @throws Exception Si el servicio no es válido, el horario no está disponible o falla la persistencia.
    */
@@ -196,15 +196,9 @@ class AgendaService
     $horaFin = $finObj->format('H:i:s');
     $horaInicioNorm = $inicioObj->format('H:i:s');
 
-    // Determinar preferencia de WhatsApp según medio de contacto y parámetros
-    $tieneWaFinal = $tieneWhatsapp ?? ($medioContacto === 'whatsapp' && !empty($telefono));
-
-    // Si la solicitud fue expresamente por llamada, anteponer etiqueta informativa
+    // Flujo web público: Exclusivo por WhatsApp
+    $tieneWaFinal = $tieneWhatsapp ?? true;
     $notaFinal = $notasCliente;
-    if ($medioContacto === 'llamada') {
-      $etiquetaLlamada = "[Solicitud sin WhatsApp - Contacto por Llamada]";
-      $notaFinal = $notaFinal ? "{$etiquetaLlamada} {$notaFinal}" : $etiquetaLlamada;
-    }
 
     // Ejecución atómica garantizada con transacción SQL
     $resultado = $this->db->transaction(function () use (
@@ -751,7 +745,7 @@ class AgendaService
 
       $payload = [
         'title' => '🔔 Nueva Solicitud de Cita - Casa Nei',
-        'body' => "{$cliente->getNombreCompleto()} solicita {$servicio->getNombre()} ({$cita->getFechaCita()} a las {$horaFormato}).",
+        'body' => "{$cliente->getNombreCompleto()} solicita {$servicio->getNombre()} ({$cita->getFechaCita()} a las {$horaFormato}). Verifica en WhatsApp el código [{$cita->getCodigoCita()}] antes de confirmar.",
         'icon' => $iconUrl,
         'badge' => $iconUrl,
         'tag' => 'cita-' . $cita->getId(),
