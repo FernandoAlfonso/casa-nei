@@ -91,6 +91,8 @@ try {
     $method === 'POST' && $path === '/admin/citas/confirmar' => $controller->confirmarCita($request),
     $method === 'POST' && $path === '/admin/citas/cancelar' => $controller->cancelarCita($request),
     $method === 'POST' && $path === '/admin/citas/actualizar' => $controller->actualizarCita($request),
+    $method === 'GET' && $path === '/admin/vapid-key' => $pwaController->obtenerVapidKey($request),
+    $method === 'POST' && $path === '/admin/push-subscribe' => $pwaController->suscribirDispositivo($request),
 
     // Endpoints de prueba para PWA y Web Push (Google FCM / Apple APNs)
     $method === 'GET' && $path === '/pwa/vapid-key' => $pwaController->obtenerVapidKey($request),
