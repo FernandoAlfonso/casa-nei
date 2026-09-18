@@ -362,6 +362,43 @@ class AgendaController
   }
 
   /**
+   * GET /api/admin/citas
+   *
+   * Lista citas para el panel administrativo. Soporta filtros:
+   * - ?fecha=YYYY-MM-DD
+   * - ?mes=YYYY-MM
+   * - ?estado=confirmada
+   * 
+   * Si no se envían filtros de fecha, puede retornar un rango por defecto o todo.
+   *
+   * @param Request $request
+   * @return void
+   */
+  public function obtenerCitasAdmin(Request $request): void
+  {
+    try {
+      $fecha = $request->getQuery('fecha');
+      $mes = $request->getQuery('mes');
+      $estado = $request->getQuery('estado');
+
+      if ($fecha) {
+        $citas = $this->agendaService->obtenerCitasAdminPorRango($fecha, $fecha, $estado);
+      } elseif ($mes) {
+        $inicio = $mes . '-01';
+        $fin = date('Y-m-t', strtotime($inicio));
+        $citas = $this->agendaService->obtenerCitasAdminPorRango($inicio, $fin, $estado);
+      } else {
+        // Por defecto: traer todas las pendientes (comportamiento legacy/fallback)
+        $citas = $this->agendaService->obtenerSolicitudesPendientesAdmin();
+      }
+
+      Response::success($citas, "Citas recuperadas con éxito");
+    } catch (Throwable $e) {
+      Response::error("Error al obtener citas: " . $e->getMessage(), 500);
+    }
+  }
+
+  /**
    * POST /api/admin/citas/confirmar
    * Body: { "cita_id": 1, "mensaje_admin": "Favor de traer ropa cómoda..." }
    *

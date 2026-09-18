@@ -280,4 +280,55 @@ class CitaRepository
       return $row;
     });
   }
+
+  /**
+   * Obtiene citas con detalles de cliente en un rango de fechas, útil para el calendario admin.
+   *
+   * @param string $fechaInicio
+   * @param string $fechaFin
+   * @param string|null $estado Filtro opcional
+   * @return array
+   */
+  public function obtenerDetallesPorRangoFechas(string $fechaInicio, string $fechaFin, ?string $estado = null): array
+  {
+    $sql = "SELECT
+              c.id AS cita_id,
+              c.codigo_cita,
+              c.fecha_cita,
+              c.hora_inicio,
+              c.hora_fin,
+              c.estado,
+              c.tiene_whatsapp,
+              c.canal,
+              c.notas_cliente,
+              c.notas_admin,
+              c.created_at AS fecha_solicitud,
+              cl.id AS cliente_id,
+              cl.nombre_completo AS cliente_nombre,
+              cl.telefono_encriptado,
+              s.id AS servicio_id,
+              s.nombre AS servicio_nombre,
+              s.duracion_minutos,
+              s.precio AS servicio_precio
+            FROM citas c
+            INNER JOIN clientes cl ON c.cliente_id = cl.id
+            INNER JOIN servicios s ON c.servicio_id = s.id
+            WHERE c.fecha_cita BETWEEN ? AND ?";
+    
+    $params = [$fechaInicio, $fechaFin];
+    
+    if ($estado) {
+      $sql .= " AND c.estado = ?";
+      $params[] = $estado;
+    }
+    
+    $sql .= " ORDER BY c.fecha_cita ASC, c.hora_inicio ASC";
+
+    return $this->db->fetchAll($sql, $params, function (array $row): array {
+      $encryptedPhone = $row['telefono_encriptado'] ?? null;
+      $row['cliente_telefono'] = (!empty($encryptedPhone)) ? $this->crypto->decrypt($encryptedPhone) : null;
+      unset($row['telefono_encriptado']);
+      return $row;
+    });
+  }
 }
