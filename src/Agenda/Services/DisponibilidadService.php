@@ -209,6 +209,45 @@ class DisponibilidadService
   }
 
   /**
+   * Obtiene la disponibilidad resumida para todo un mes, ideal para la vista minimalista administrativa.
+   *
+   * @param string $mes Formato YYYY-MM
+   * @return array
+   */
+  public function obtenerCalendarioMensual(string $mes): array
+  {
+    $inicioMes = new DateTime("{$mes}-01");
+    $finMes = clone $inicioMes;
+    $finMes->modify('last day of this month');
+
+    $diasTotales = (int) $finMes->format('d');
+    $semanas = ceil($diasTotales / 7) + 1; // Un poco extra para asegurar cubrir el mes completo si cae cruzado
+
+    $calendarioCompleto = $this->obtenerCalendario($inicioMes->format('Y-m-d'), (int) $semanas, null, false, false);
+    
+    $mesData = [];
+    foreach ($calendarioCompleto as $fecha => $diaData) {
+      if (str_starts_with($fecha, $mes)) {
+        // Enriquecer con el indicador visual solicitado: todo agendado (ocupado), poco agendado, nada agendado
+        $estadoAgendamiento = 'nada agendado';
+        
+        if ($diaData['estado'] === 'cerrado' || $diaData['estado'] === 'bloqueado') {
+          $estadoAgendamiento = 'no laboral';
+        } elseif ($diaData['estado'] === 'ocupado' || $diaData['slots_libres'] === 0) {
+          $estadoAgendamiento = 'todo agendado';
+        } elseif ($diaData['slots_libres'] <= 3) { // arbitrario, <= 3 slots libres es "poco agendado" / casi lleno
+          $estadoAgendamiento = 'poco agendado';
+        }
+
+        $diaData['nivel_ocupacion'] = $estadoAgendamiento;
+        $mesData[$fecha] = $diaData;
+      }
+    }
+
+    return array_values($mesData);
+  }
+
+  /**
    * Obtiene una lista garantizada de N días netos disponibles a partir de una fecha inicial.
    * Recorre dinámicamente el calendario hacia el futuro saltando domingos (cerrados), bloqueos
    * festivos y días ocupados hasta completar exactamente la cantidad solicitada (ej. 12 días = 2 semanas completas de Lun a Sáb).

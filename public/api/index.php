@@ -90,6 +90,7 @@ try {
     $method === 'POST' && $path === '/admin/login' => $adminAuthController->login($request),
     $method === 'GET' && $path === '/admin/solicitudes' => $controller->obtenerSolicitudesAdmin($request),
     $method === 'GET' && $path === '/admin/citas' => $controller->obtenerCitasAdmin($request),
+    $method === 'GET' && $path === '/admin/calendario-mensual' => $controller->obtenerCalendarioMensual($request),
     $method === 'POST' && $path === '/admin/citas/agendar' => $controller->agendarCitaAdmin($request),
     $method === 'POST' && $path === '/admin/citas/confirmar' => $controller->confirmarCita($request),
     $method === 'POST' && $path === '/admin/citas/cancelar' => $controller->cancelarCita($request),

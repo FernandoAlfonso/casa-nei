@@ -115,6 +115,30 @@ class AgendaController
   }
 
   /**
+   * GET /api/admin/calendario-mensual?mes=YYYY-MM
+   *
+   * Retorna el calendario resumido de un mes para la vista administrativa, incluyendo
+   * el nivel de ocupación (nada agendado, poco agendado, todo agendado).
+   *
+   * @param Request $request
+   * @return void
+   */
+  public function obtenerCalendarioMensual(Request $request): void
+  {
+    try {
+      $mes = $request->getQuery('mes');
+      if (empty($mes) || !preg_match('/^\d{4}-\d{2}$/', $mes)) {
+        Response::error("Se requiere el parámetro 'mes' en formato YYYY-MM", 422);
+      }
+
+      $data = $this->disponibilidadService->obtenerCalendarioMensual($mes);
+      Response::success($data, "Calendario mensual recuperado con éxito");
+    } catch (Throwable $e) {
+      Response::error("Error al obtener calendario mensual: " . $e->getMessage(), 500);
+    }
+  }
+
+  /**
    * GET /api/horas-disponibles?fecha=YYYY-MM-DD&servicio_id=1
    *
    * Retorna los intervalos de horas disponibles para un día y servicio específico.
