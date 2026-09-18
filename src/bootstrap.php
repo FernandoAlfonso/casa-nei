@@ -68,6 +68,7 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
 // 5. Configurar el Contenedor de Inyección de Dependencias (PSR-11)
 use App\Agenda\Controllers\AdminAuthController;
 use App\Agenda\Controllers\AgendaController;
+use App\Agenda\Controllers\ConfigController;
 use App\Agenda\Controllers\PwaTestController;
 use App\Agenda\Repositories\CitaRepository;
 use App\Agenda\Repositories\ClienteRepository;
@@ -133,6 +134,12 @@ $container->singleton(AdminAuthController::class, fn(Container $c) => new AdminA
 
 $container->singleton(PwaTestController::class, fn(Container $c) => new PwaTestController(
   webPushService: $c->get(WebPushService::class)
+));
+
+$container->singleton(ConfigController::class, fn(Container $c) => new ConfigController(
+  servicioRepo: $c->get(ServicioRepository::class),
+  horarioRepo: $c->get(HorarioRepository::class),
+  clienteRepo: $c->get(ClienteRepository::class)
 ));
 
 // 5.5 HTTP Request (Fábrica)

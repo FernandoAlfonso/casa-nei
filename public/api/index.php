@@ -28,6 +28,7 @@ if (!$container) {
 
 use App\Agenda\Controllers\AdminAuthController;
 use App\Agenda\Controllers\AgendaController;
+use App\Agenda\Controllers\ConfigController;
 use App\Agenda\Controllers\PwaTestController;
 use App\Shared\Http\Request;
 use App\Shared\Http\Response;
@@ -36,6 +37,7 @@ $request = $container->get(Request::class);
 $controller = $container->get(AgendaController::class);
 $pwaController = $container->get(PwaTestController::class);
 $adminAuthController = $container->get(AdminAuthController::class);
+$configController = $container->get(ConfigController::class);
 
 $method = $request->getMethod();
 $path = $request->getPath();
@@ -94,6 +96,18 @@ try {
     $method === 'POST' && $path === '/admin/citas/actualizar' => $controller->actualizarCita($request),
     $method === 'GET' && $path === '/admin/vapid-key' => $pwaController->obtenerVapidKey($request),
     $method === 'POST' && $path === '/admin/push-subscribe' => $pwaController->suscribirDispositivo($request),
+
+    // Endpoints administrativos (Configuración CRUD)
+    $method === 'GET' && $path === '/admin/config/servicios' => $configController->listarServicios($request),
+    $method === 'POST' && $path === '/admin/config/servicios/crear' => $configController->crearServicio($request),
+    $method === 'POST' && $path === '/admin/config/servicios/actualizar' => $configController->actualizarServicio($request),
+    $method === 'GET' && $path === '/admin/config/horarios' => $configController->listarHorarios($request),
+    $method === 'POST' && $path === '/admin/config/horarios/actualizar' => $configController->actualizarHorario($request),
+    $method === 'GET' && $path === '/admin/config/bloqueos' => $configController->listarBloqueos($request),
+    $method === 'POST' && $path === '/admin/config/bloqueos/crear' => $configController->crearBloqueo($request),
+    $method === 'POST' && $path === '/admin/config/bloqueos/eliminar' => $configController->eliminarBloqueo($request),
+    $method === 'GET' && $path === '/admin/config/clientes' => $configController->listarClientes($request),
+    $method === 'POST' && $path === '/admin/config/clientes/actualizar' => $configController->actualizarCliente($request),
 
     // Endpoints de prueba para PWA y Web Push (Google FCM / Apple APNs)
     $method === 'GET' && $path === '/pwa/vapid-key' => $pwaController->obtenerVapidKey($request),

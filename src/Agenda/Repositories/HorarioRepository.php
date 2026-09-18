@@ -62,6 +62,43 @@ class HorarioRepository
   }
 
   /**
+   * Obtiene todos los horarios semanales (activos e inactivos) para el panel admin.
+   *
+   * @return array
+   */
+  public function obtenerTodosSemanales(): array
+  {
+    $sql = "SELECT id, dia_semana, hora_inicio, hora_fin, activo 
+            FROM horarios_atencion 
+            ORDER BY dia_semana ASC";
+    return $this->db->fetchAll($sql);
+  }
+
+  /**
+   * Actualiza un horario semanal existente.
+   *
+   * @param int $id
+   * @param string $horaInicio
+   * @param string $horaFin
+   * @param bool $activo
+   * @return bool
+   */
+  public function actualizarSemanal(int $id, string $horaInicio, string $horaFin, bool $activo): bool
+  {
+    $sql = "UPDATE horarios_atencion 
+            SET hora_inicio = ?, hora_fin = ?, activo = ? 
+            WHERE id = ?";
+    
+    $actualizado = $this->db->execute($sql, [$horaInicio, $horaFin, $activo ? 1 : 0, $id]) > 0;
+    
+    if ($actualizado) {
+      $this->invalidarCache();
+    }
+    
+    return $actualizado;
+  }
+
+  /**
    * Obtiene el horario de atención para un día de la semana específico (0=Domingo, 1=Lunes, ...).
    * Consulta primero los horarios semanales en memoria/disco antes de recurrir a la base de datos.
    *
@@ -100,6 +137,21 @@ class HorarioRepository
             ORDER BY fecha ASC, hora_inicio ASC";
 
     return $this->db->fetchAll($sql, [$fechaInicio, $fechaFin], fn(array $r) => BloqueoAgenda::fromArray($r));
+  }
+
+  /**
+   * Obtiene todos los bloqueos futuros para el panel administrativo.
+   *
+   * @return array
+   */
+  public function obtenerTodosBloqueosFuturos(): array
+  {
+    $sql = "SELECT id, fecha, hora_inicio, hora_fin, motivo 
+            FROM bloqueos_agenda 
+            WHERE fecha >= CURRENT_DATE()
+            ORDER BY fecha ASC, hora_inicio ASC";
+    
+    return $this->db->fetchAll($sql);
   }
 
   /**

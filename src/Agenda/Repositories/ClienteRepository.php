@@ -62,6 +62,27 @@ class ClienteRepository
   }
 
   /**
+   * Obtiene todos los clientes registrados para el panel administrativo, descifrando el teléfono.
+   *
+   * @param int $limite Límite de resultados (opcional).
+   * @return array
+   */
+  public function obtenerTodos(int $limite = 100): array
+  {
+    $sql = "SELECT id, nombre_completo, telefono_encriptado, created_at, updated_at 
+            FROM clientes 
+            ORDER BY nombre_completo ASC
+            LIMIT ?";
+    
+    return $this->db->fetchAll($sql, [$limite], function (array $row): array {
+      $encryptedPhone = $row['telefono_encriptado'] ?? null;
+      $row['telefono'] = (!empty($encryptedPhone)) ? $this->crypto->decrypt($encryptedPhone) : null;
+      unset($row['telefono_encriptado']);
+      return $row;
+    });
+  }
+
+  /**
    * Busca un cliente por su identificador único primario.
    *
    * @param int $id Identificador del cliente.

@@ -61,6 +61,19 @@ class ServicioRepository
   }
 
   /**
+   * Obtiene todos los servicios (activos e inactivos) para el panel administrativo.
+   *
+   * @return array
+   */
+  public function obtenerTodos(): array
+  {
+    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+            FROM servicios 
+            ORDER BY id ASC";
+    return $this->db->fetchAll($sql);
+  }
+
+  /**
    * Obtiene la proyección directa del catálogo de servicios activos para la API (CQRS Read Model).
    * Evita la instanciación de objetos de entidad para serialización directa a JSON.
    *
