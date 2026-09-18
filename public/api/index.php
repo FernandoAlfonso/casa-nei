@@ -26,6 +26,7 @@ if (!$container) {
   exit;
 }
 
+use App\Agenda\Controllers\AdminAuthController;
 use App\Agenda\Controllers\AgendaController;
 use App\Agenda\Controllers\PwaTestController;
 use App\Shared\Http\Request;
@@ -34,6 +35,7 @@ use App\Shared\Http\Response;
 $request = $container->get(Request::class);
 $controller = $container->get(AgendaController::class);
 $pwaController = $container->get(PwaTestController::class);
+$adminAuthController = $container->get(AdminAuthController::class);
 
 $method = $request->getMethod();
 $path = $request->getPath();
@@ -41,6 +43,35 @@ $path = $request->getPath();
 // Responder a solicitudes preflight de CORS
 if ($method === 'OPTIONS') {
   Response::json([], 200);
+}
+
+// Middleware Admin
+if (str_starts_with($path, '/admin/') && $path !== '/admin/login') {
+  $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+  
+  if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+    Response::error('Token no proporcionado', 401);
+  }
+  
+  $token = $matches[1];
+  $parts = explode('.', $token);
+  if (count($parts) !== 3) {
+    Response::error('Token inválido', 401);
+  }
+  
+  list($head, $payload, $signature) = $parts;
+  
+  $validSignature = hash_hmac('sha256', $head . "." . $payload, ADMIN_TOKEN_SECRET, true);
+  $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($validSignature));
+  
+  if (!hash_equals($base64UrlSignature, $signature)) {
+    Response::error('Token modificado o inválido', 401);
+  }
+  
+  $payloadData = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)), true);
+  if (isset($payloadData['exp']) && time() > $payloadData['exp']) {
+    Response::error('Token expirado', 401);
+  }
 }
 
 // Enrutador de peticiones REST
@@ -54,6 +85,7 @@ try {
     $method === 'POST' && $path === '/citas/agendar' => $controller->agendarCita($request),
 
     // Endpoints administrativos
+    $method === 'POST' && $path === '/admin/login' => $adminAuthController->login($request),
     $method === 'GET' && $path === '/admin/solicitudes' => $controller->obtenerSolicitudesAdmin($request),
     $method === 'POST' && $path === '/admin/citas/agendar' => $controller->agendarCitaAdmin($request),
     $method === 'POST' && $path === '/admin/citas/confirmar' => $controller->confirmarCita($request),
