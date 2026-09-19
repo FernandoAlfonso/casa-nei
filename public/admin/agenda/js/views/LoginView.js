@@ -1,3 +1,6 @@
+import ApiService from '../services/api.js';
+import PushService from '../services/push.js';
+
 export default class LoginView {
   render() {
     return `
@@ -10,11 +13,12 @@ export default class LoginView {
         
         <div class="card" style="text-align: left;">
           <form id="loginForm">
+            <div id="loginError" style="display: none; color: var(--danger); background: var(--danger-glow); padding: 12px; border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 16px; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
             <div class="form-group">
               <label class="form-label">Contraseña de Administrador</label>
               <input type="password" id="password" class="form-input" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn">Ingresar</button>
+            <button type="submit" id="btnSubmit" class="btn">Ingresar</button>
           </form>
         </div>
       </div>
@@ -23,13 +27,48 @@ export default class LoginView {
 
   mount() {
     const form = document.getElementById('loginForm');
-    form.addEventListener('submit', (e) => {
+    const errorDiv = document.getElementById('loginError');
+    const btnSubmit = document.getElementById('btnSubmit');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      // Placeholder for future logic
-      console.log('Intento de login');
-      // Simulamos auth
-      localStorage.setItem('admin_token', 'demo-token');
-      window.location.hash = '#home';
+      
+      const password = document.getElementById('password').value;
+      
+      errorDiv.style.display = 'none';
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = 'Verificando...';
+
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Contraseña incorrecta');
+        }
+
+        // Store token
+        localStorage.setItem('admin_token', data.data.token);
+        
+        // Attempt Push Subscription
+        btnSubmit.innerHTML = 'Conectando notificaciones...';
+        await PushService.subscribeDevice();
+
+        // Redirect to Home
+        window.location.hash = '#home';
+
+      } catch (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.style.display = 'block';
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = 'Ingresar';
+      }
     });
   }
 }
+
