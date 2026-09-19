@@ -5,13 +5,20 @@ import CalendarView from './views/CalendarView.js';
 import SettingsView from './views/SettingsView.js';
 import NewCitaView from './views/NewCitaView.js';
 
+import ServicesView from './views/config/ServicesView.js';
+import HorariosView from './views/config/HorariosView.js';
+import BloqueosView from './views/config/BloqueosView.js';
+
 // Define Application Routes
 const routes = {
   'login': LoginView,
   'home': HomeView,
   'calendar': CalendarView,
   'settings': SettingsView,
-  'new-cita': NewCitaView
+  'new-cita': NewCitaView,
+  'settings/servicios': ServicesView,
+  'settings/horarios': HorariosView,
+  'settings/bloqueos': BloqueosView
 };
 
 // Application Bootstrap
