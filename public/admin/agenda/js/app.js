@@ -3,13 +3,15 @@ import LoginView from './views/LoginView.js';
 import HomeView from './views/HomeView.js';
 import CalendarView from './views/CalendarView.js';
 import SettingsView from './views/SettingsView.js';
+import NewCitaView from './views/NewCitaView.js';
 
 // Define Application Routes
 const routes = {
   'login': LoginView,
   'home': HomeView,
   'calendar': CalendarView,
-  'settings': SettingsView
+  'settings': SettingsView,
+  'new-cita': NewCitaView
 };
 
 // Application Bootstrap

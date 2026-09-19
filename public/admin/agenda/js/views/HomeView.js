@@ -9,7 +9,7 @@ export default class HomeView {
             <h1 style="font-size: 1.8rem;">Solicitudes</h1>
             <p style="color: var(--text-muted); font-size: 0.9rem;">Gestiona las citas pendientes</p>
           </div>
-          <button class="btn" style="width: auto; padding: 10px 16px; font-size: 0.9rem; gap: 6px;">
+          <button class="btn" onclick="window.location.hash='#new-cita'" style="width: auto; padding: 10px 16px; font-size: 0.9rem; gap: 6px;">
             <span>➕</span> Nueva
           </button>
         </header>
