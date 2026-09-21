@@ -35,6 +35,7 @@ export default class ServicesView {
     try {
       const response = await ApiService.get('/admin/config/servicios');
       const servicios = response.data || [];
+      this.servicios = servicios;
       
       if (servicios.length === 0) {
         this.container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay servicios registrados.</p>';
@@ -50,14 +51,18 @@ export default class ServicesView {
               <h3 style="font-size: 1.1rem;">${s.nombre}</h3>
               <p style="font-size: 0.85rem; color: var(--text-muted);">${s.duracion_minutos} minutos &bull; $${s.precio || '0'}</p>
             </div>
-            <button class="btn btn-secondary btn-edit" data-id="${s.id}" data-nombre="${s.nombre}" data-duracion="${s.duracion_minutos}" data-precio="${s.precio || 0}" data-activo="${s.activo}" style="width: auto; padding: 8px 12px;">Editar</button>
+            <button class="btn btn-secondary btn-edit" data-id="${s.id}" style="width: auto; padding: 8px 12px;">Editar</button>
           </div>
         `;
       });
       this.container.innerHTML = html;
 
       this.container.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', (e) => this.abrirModal(e.target.dataset));
+        btn.addEventListener('click', (e) => {
+          const id = parseInt(e.target.dataset.id, 10);
+          const servicio = this.servicios.find(s => s.id === id);
+          this.abrirModal(servicio);
+        });
       });
     } catch (error) {
       this.container.innerHTML = `<p style="color: var(--danger);">Error: ${error.message}</p>`;
@@ -69,9 +74,11 @@ export default class ServicesView {
     const title = isEdit ? 'Editar Servicio' : 'Nuevo Servicio';
     const id = isEdit ? data.id : '';
     const nombre = isEdit ? data.nombre : '';
-    const duracion = isEdit ? data.duracion : '60';
+    const descripcion = isEdit && data.descripcion ? data.descripcion : '';
+    const instrucciones = isEdit && data.instrucciones ? data.instrucciones : '';
+    const duracion = isEdit ? data.duracion_minutos : '60';
     const precio = isEdit ? data.precio : '0';
-    const checked = isEdit && data.activo === 'false' ? '' : 'checked';
+    const checked = isEdit && data.activo === false ? '' : 'checked';
 
     // Para simplificar, usamos prompts (en vez de un HTML modal completo)
     // Ya que esto es un admin rápido. Pero hagámoslo bien con un div overlay temporal
@@ -86,6 +93,14 @@ export default class ServicesView {
           <div class="form-group">
             <label class="form-label">Nombre</label>
             <input type="text" id="srv_nombre" class="form-input" value="${nombre}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descripción</label>
+            <textarea id="srv_descripcion" class="form-input" rows="2">${descripcion}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instrucciones</label>
+            <textarea id="srv_instrucciones" class="form-input" rows="2">${instrucciones}</textarea>
           </div>
           <div style="display: flex; gap: 16px;">
             <div class="form-group" style="flex: 1;">
@@ -120,6 +135,8 @@ export default class ServicesView {
       const payload = {
         id: document.getElementById('srv_id').value,
         nombre: document.getElementById('srv_nombre').value,
+        descripcion: document.getElementById('srv_descripcion').value || null,
+        instrucciones: document.getElementById('srv_instrucciones').value || null,
         duracion_minutos: document.getElementById('srv_duracion').value,
         precio: document.getElementById('srv_precio').value,
         activo: document.getElementById('srv_activo').checked
