@@ -57,4 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Router
   router.init();
+
+  // Autosize textareas globally as user types
+  document.addEventListener('input', (e) => {
+    if (e.target.tagName && e.target.tagName.toLowerCase() === 'textarea') {
+      e.target.style.height = 'auto';
+      e.target.style.height = e.target.scrollHeight + 'px';
+    }
+  }, false);
 });
