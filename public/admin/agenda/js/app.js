@@ -59,6 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Router
   router.init();
 
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(registration => {
+        console.log('Service Worker registrado con éxito:', registration.scope);
+      })
+      .catch(error => {
+        console.error('Error al registrar Service Worker:', error);
+      });
+  }
+
   // Attempt silent push subscription if user is already logged in
   if (localStorage.getItem('admin_token') && 'Notification' in window && Notification.permission === 'granted') {
     PushService.subscribeDevice().catch(e => console.error("Auto-subscribe failed:", e));
