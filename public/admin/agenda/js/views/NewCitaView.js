@@ -81,7 +81,7 @@ export default class NewCitaView {
   async loadServicios() {
     try {
       // El endpoint público de servicios para llenar el catálogo
-      const response = await fetch('/api/servicios');
+      const response = await fetch(`${ApiService.getApiBase()}/servicios`);
       const data = await response.json();
       
       this.selectServicio.innerHTML = '<option value="">Selecciona un servicio</option>';

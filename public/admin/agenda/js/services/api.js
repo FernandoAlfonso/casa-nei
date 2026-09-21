@@ -1,11 +1,18 @@
 // Utility class to handle API requests and JWT token
 export default class ApiService {
+  static getApiBase() {
+    if (typeof window !== 'undefined' && window.location && window.location.pathname.startsWith('/casa-nei')) {
+      return '/casa-nei/api';
+    }
+    return '/api';
+  }
+
   static getToken() {
     return localStorage.getItem('admin_token');
   }
 
   static async request(endpoint, options = {}) {
-    const url = `/api${endpoint}`;
+    const url = `${this.getApiBase()}${endpoint}`;
     
     const headers = {
       'Content-Type': 'application/json',
