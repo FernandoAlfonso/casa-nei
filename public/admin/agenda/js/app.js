@@ -4,6 +4,7 @@ import HomeView from './views/HomeView.js';
 import CalendarView from './views/CalendarView.js';
 import SettingsView from './views/SettingsView.js';
 import NewCitaView from './views/NewCitaView.js';
+import PushService from './services/push.js';
 
 import ServicesView from './views/config/ServicesView.js';
 import HorariosView from './views/config/HorariosView.js';
@@ -57,6 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Router
   router.init();
+
+  // Attempt silent push subscription if user is already logged in
+  if (localStorage.getItem('admin_token') && 'Notification' in window && Notification.permission === 'granted') {
+    PushService.subscribeDevice().catch(e => console.error("Auto-subscribe failed:", e));
+  }
 
   // Autosize textareas globally as user types
   document.addEventListener('input', (e) => {
