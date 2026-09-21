@@ -739,8 +739,8 @@ class AgendaService
   private function notificarAdminNuevaCita(Cita $cita, Cliente $cliente, Servicio $servicio): void
   {
     try {
-      $sub = $this->webPushService->obtenerUltimaSuscripcion();
-      if (!$sub) {
+      $subs = $this->webPushService->obtenerSuscripciones();
+      if (empty($subs)) {
         return;
       }
 
@@ -777,9 +777,15 @@ class AgendaService
         ]
       ];
 
-      $this->webPushService->enviarNotificacion($sub, $payload);
+      foreach ($subs as $sub) {
+        try {
+          $this->webPushService->enviarNotificacion($sub, $payload);
+        } catch (Throwable $e) {
+          error_log("Aviso: Notificación Web Push a Admin no entregada a endpoint {$sub['endpoint']}: " . $e->getMessage());
+        }
+      }
     } catch (Throwable $e) {
-      error_log("Aviso: Notificación Web Push a Admin no entregada: " . $e->getMessage());
+      error_log("Aviso: Error general al notificar Web Push a Admin: " . $e->getMessage());
     }
   }
 

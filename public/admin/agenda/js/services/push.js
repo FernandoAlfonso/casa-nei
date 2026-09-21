@@ -58,10 +58,8 @@ export default class PushService {
         });
       }
 
-      // Enviar la suscripción al backend
-      await ApiService.post('/admin/push-subscribe', {
-        subscription: subscription
-      });
+      const subJson = subscription.toJSON ? subscription.toJSON() : subscription;
+      await ApiService.post('/admin/push-subscribe', subJson);
 
       console.log('Dispositivo suscrito a Push Notifications exitosamente.');
       return true;
