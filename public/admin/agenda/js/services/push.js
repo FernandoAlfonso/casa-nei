@@ -37,7 +37,7 @@ export default class PushService {
 
       // Fetch VAPID Key from backend
       const vapidRes = await ApiService.get('/admin/vapid-key');
-      const publicKey = vapidRes.data.public_key;
+      const publicKey = vapidRes.data.publicKey;
 
       if (!publicKey) {
         throw new Error('No se recibió llave VAPID pública.');

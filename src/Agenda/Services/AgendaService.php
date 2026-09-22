@@ -741,8 +741,10 @@ class AgendaService
     try {
       $subs = $this->webPushService->obtenerSuscripciones();
       if (empty($subs)) {
+        error_log("Push Admin: 0 suscripciones activas encontradas.");
         return;
       }
+      error_log("Push Admin: " . count($subs) . " suscripciones encontradas.");
 
       $horaFormato = self::formatearHoraAmPm(substr($cita->getHoraInicio(), 0, 5));
       $telefonoTexto = $this->clienteRepo->descifrarTelefono($cliente) ?? 'Sin celular';
@@ -779,7 +781,8 @@ class AgendaService
 
       foreach ($subs as $sub) {
         try {
-          $this->webPushService->enviarNotificacion($sub, $payload);
+          $res = $this->webPushService->enviarNotificacion($sub, $payload);
+          error_log("Push Admin exitoso a {$sub['endpoint']}: HTTP " . $res['http_code']);
         } catch (Throwable $e) {
           error_log("Aviso: Notificación Web Push a Admin no entregada a endpoint {$sub['endpoint']}: " . $e->getMessage());
         }
