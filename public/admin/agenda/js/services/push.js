@@ -29,7 +29,15 @@ export default class PushService {
     }
 
     try {
-      const permission = await Notification.requestPermission();
+      let permission;
+      try {
+        permission = await Notification.requestPermission();
+      } catch (e) {
+        permission = await new Promise((resolve) => {
+          Notification.requestPermission((result) => resolve(result));
+        });
+      }
+
       if (permission !== 'granted') {
         console.warn('Permiso de notificaciones denegado.');
         return false;
