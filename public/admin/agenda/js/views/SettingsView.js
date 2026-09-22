@@ -84,12 +84,15 @@ export default class SettingsView {
             pushStatusText.style.color = 'var(--primary)';
             alert('¡Notificaciones Push habilitadas correctamente en este dispositivo!');
           } else {
-            pushStatusText.textContent = 'Error al activar ❌';
+            pushStatusText.textContent = 'Permiso denegado ❌';
             pushStatusText.style.color = 'var(--danger)';
+            alert('No se pudo activar: Permiso denegado o push no soportado.');
           }
         }).catch(err => {
           console.error(err);
-          pushStatusText.textContent = 'Activar Notificaciones Push';
+          pushStatusText.textContent = 'Error al activar ❌';
+          pushStatusText.style.color = 'var(--danger)';
+          alert(`Error al activar notificaciones: ${err.message}`);
         });
       });
     }

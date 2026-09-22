@@ -55,16 +55,17 @@ export default class PushService {
 
       const registration = await navigator.serviceWorker.ready;
       
-      // Intentar obtener una suscripción existente
-      let subscription = await registration.pushManager.getSubscription();
-      
-      if (!subscription) {
-        // Suscribir
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: applicationServerKey
-        });
+      // Intentar obtener una suscripción existente y eliminarla para forzar una limpia
+      let existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        await existingSubscription.unsubscribe();
       }
+      
+      // Suscribir en limpio
+      let subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey
+      });
 
       const subJson = subscription.toJSON ? subscription.toJSON() : subscription;
       await ApiService.post('/admin/push-subscribe', subJson);
@@ -74,7 +75,7 @@ export default class PushService {
 
     } catch (err) {
       console.error('Error al suscribir el dispositivo:', err);
-      return false;
+      throw err; // Rethrow so the UI can catch and display it
     }
   }
 }
