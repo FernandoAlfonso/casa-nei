@@ -11,7 +11,6 @@ use App\Agenda\Repositories\ClienteRepository;
 use App\Agenda\Repositories\HorarioRepository;
 use App\Agenda\Repositories\ServicioRepository;
 use App\Shared\Db\DataBase;
-use App\Shared\Services\WebPushService;
 use DateTime;
 use Exception;
 use Throwable;
@@ -56,9 +55,14 @@ class AgendaService
   private DisponibilidadService $disponibilidadService;
 
   /**
-   * Servicio para despacho de notificaciones Web Push RFC 8291/8292.
+   * Servicio de notificaciones.
    */
-  private WebPushService $webPushService;
+  private ?NotificationService $notificationService;
+
+  /**
+   * Servicio de WhatsApp.
+   */
+  private WhatsAppService $whatsAppService;
 
   /**
    * Conexión a la base de datos para transacciones atómicas.
@@ -78,7 +82,8 @@ class AgendaService
    * @param ServicioRepository|null $servicioRepo
    * @param HorarioRepository|null $horarioRepo
    * @param DisponibilidadService|null $disponibilidadService
-   * @param WebPushService|null $webPushService
+   * @param NotificationService|null $notificationService
+   * @param WhatsAppService|null $whatsAppService
    * @param DataBase|null $db
    * @param string|null $adminWhatsapp
    */
@@ -88,7 +93,8 @@ class AgendaService
     ?ServicioRepository $servicioRepo = null,
     ?HorarioRepository $horarioRepo = null,
     ?DisponibilidadService $disponibilidadService = null,
-    ?WebPushService $webPushService = null,
+    ?NotificationService $notificationService = null,
+    ?WhatsAppService $whatsAppService = null,
     ?DataBase $db = null,
     ?string $adminWhatsapp = null
   ) {
@@ -97,7 +103,8 @@ class AgendaService
     $this->servicioRepo = $servicioRepo ?? new ServicioRepository();
     $this->horarioRepo = $horarioRepo ?? new HorarioRepository();
     $this->disponibilidadService = $disponibilidadService ?? new DisponibilidadService();
-    $this->webPushService = $webPushService ?? new WebPushService();
+    $this->notificationService = $notificationService;
+    $this->whatsAppService = $whatsAppService ?? new WhatsAppService();
     $this->db = $db ?? DataBase::getInstance();
 
     if ($adminWhatsapp !== null) {
@@ -283,7 +290,7 @@ class AgendaService
     $whatsappUrl = null;
 
     if ($tieneWaFinal && !empty($this->adminWhatsapp)) {
-      $mensajeWhatsapp = $this->generarMensajeSolicitudAdmin(
+      $mensajeWhatsapp = $this->whatsAppService->generarMensajeSolicitudAdmin(
         nombre: $nombreCompleto,
         telefono: $telefono ?? '',
         servicioNombre: $servicio->getNombre(),
@@ -294,11 +301,13 @@ class AgendaService
         notas: $notasCliente
       );
 
-      $whatsappUrl = $this->crearEnlaceWhatsapp($this->adminWhatsapp, $mensajeWhatsapp);
+      $whatsappUrl = $this->whatsAppService->crearEnlaceWhatsapp($this->adminWhatsapp, $mensajeWhatsapp);
     }
 
     // 5. Notificar al Administrador mediante Web Push en su PWA (no bloqueante)
-    $this->notificarAdminNuevaCita($citaCreada, $clienteCreado, $servicio);
+    if ($this->notificationService) {
+      $this->notificationService->notificarAdminNuevaCita($citaCreada, $clienteCreado, $servicio);
+    }
 
     return [
       'exito' => true,
@@ -321,7 +330,7 @@ class AgendaService
       ],
       'fecha_cita' => $fechaCita,
       'hora_inicio' => $inicioObj->format('H:i'),
-      'hora_inicio_formato' => self::formatearHoraAmPm($inicioObj->format('H:i')),
+      'hora_inicio_formato' => DisponibilidadService::formatearHoraAmPm($inicioObj->format('H:i')),
       'hora_fin' => $finObj->format('H:i'),
       'mensaje_whatsapp' => $mensajeWhatsapp,
       'whatsapp_url' => $whatsappUrl
@@ -455,7 +464,7 @@ class AgendaService
     $whatsappUrl = null;
     $mensajeWhatsapp = null;
     if ($tieneWaEfectivo && $telefonoNormalizado !== null) {
-      $mensajeWhatsapp = $this->generarMensajeConfirmacionCliente(
+      $mensajeWhatsapp = $this->whatsAppService->generarMensajeConfirmacionCliente(
         nombre: $clienteCreado->getNombreCompleto(),
         servicioNombre: $servicio->getNombre(),
         fecha: $fechaCita,
@@ -463,7 +472,7 @@ class AgendaService
         codigoCita: $resultado['codigo_cita'],
         mensajeExtra: $notasAdmin
       );
-      $whatsappUrl = $this->crearEnlaceWhatsapp($telefonoNormalizado, $mensajeWhatsapp);
+      $whatsappUrl = $this->whatsAppService->crearEnlaceWhatsapp($telefonoNormalizado, $mensajeWhatsapp);
     }
 
     return [
@@ -544,7 +553,7 @@ class AgendaService
     $whatsappUrl = null;
 
     if ($cita->tieneWhatsapp() && !empty($telefonoCliente)) {
-      $mensajeConfirmacion = $this->generarMensajeConfirmacionCliente(
+      $mensajeConfirmacion = $this->whatsAppService->generarMensajeConfirmacionCliente(
         nombre: $cliente->getNombreCompleto(),
         servicioNombre: $servicio->getNombre(),
         fecha: $cita->getFechaCita(),
@@ -553,7 +562,7 @@ class AgendaService
         mensajeExtra: $mensajeAdmin
       );
 
-      $whatsappUrl = $this->crearEnlaceWhatsapp($telefonoCliente, $mensajeConfirmacion);
+      $whatsappUrl = $this->whatsAppService->crearEnlaceWhatsapp($telefonoCliente, $mensajeConfirmacion);
     }
 
     return [
@@ -603,13 +612,16 @@ class AgendaService
     $whatsappUrl = null;
 
     if ($cita->tieneWhatsapp() && !empty($telefonoCliente)) {
-      $horaFormato = self::formatearHoraAmPm(substr($cita->getHoraInicio(), 0, 5));
-      $mensajeCancelacion = "Hola {$cliente->getNombreCompleto()}, te informamos que tu cita con código *{$cita->getCodigoCita()}* para el servicio *{$servicio->getNombre()}* el día *{$cita->getFechaCita()}* a las *{$horaFormato}* ha sido cancelada.";
-      if ($motivo !== null && trim($motivo) !== '') {
-        $mensajeCancelacion .= "\n\n*Motivo:* {$motivo}";
-      }
+      $mensajeCancelacion = $this->whatsAppService->generarMensajeCancelacionCliente(
+        nombre: $cliente->getNombreCompleto(),
+        servicioNombre: $servicio->getNombre(),
+        fecha: $cita->getFechaCita(),
+        horaInicio: substr($cita->getHoraInicio(), 0, 5),
+        codigoCita: $cita->getCodigoCita(),
+        motivo: $motivo
+      );
 
-      $whatsappUrl = $this->crearEnlaceWhatsapp($telefonoCliente, $mensajeCancelacion);
+      $whatsappUrl = $this->whatsAppService->crearEnlaceWhatsapp($telefonoCliente, $mensajeCancelacion);
     }
 
     return [
@@ -706,13 +718,15 @@ class AgendaService
     $whatsappUrl = null;
 
     if ($cita->tieneWhatsapp() && !empty($telefonoCliente)) {
-      $horaReprog = self::formatearHoraAmPm($inicioObj->format('H:i'));
-      $mensajeActualizacion = "Hola {$cliente->getNombreCompleto()}, tu cita con código *{$cita->getCodigoCita()}* ha sido reprogramada para el día *{$nuevaFecha}* a las *{$horaReprog}*.";
-      if ($motivo !== null && trim($motivo) !== '') {
-        $mensajeActualizacion .= "\n\n*Nota:* {$motivo}";
-      }
+      $mensajeActualizacion = $this->whatsAppService->generarMensajeReprogramacionCliente(
+        nombre: $cliente->getNombreCompleto(),
+        fecha: $nuevaFecha,
+        horaInicio: $inicioObj->format('H:i'),
+        codigoCita: $cita->getCodigoCita(),
+        motivo: $motivo
+      );
 
-      $whatsappUrl = $this->crearEnlaceWhatsapp($telefonoCliente, $mensajeActualizacion);
+      $whatsappUrl = $this->whatsAppService->crearEnlaceWhatsapp($telefonoCliente, $mensajeActualizacion);
     }
 
     return [
@@ -721,169 +735,12 @@ class AgendaService
       'codigo_cita' => $cita->getCodigoCita(),
       'fecha_cita' => $nuevaFecha,
       'hora_inicio' => $inicioObj->format('H:i'),
-      'hora_inicio_formato' => self::formatearHoraAmPm($inicioObj->format('H:i')),
+      'hora_inicio_formato' => DisponibilidadService::formatearHoraAmPm($inicioObj->format('H:i')),
       'tiene_whatsapp' => $cita->tieneWhatsapp(),
       'mensaje_whatsapp' => $mensajeActualizacion,
       'whatsapp_url' => $whatsappUrl
     ];
   }
 
-  /**
-   * Notifica de forma asíncrona o no bloqueante al Administrador en su PWA cuando se agenda una cita.
-   *
-   * @param Cita $cita
-   * @param Cliente $cliente
-   * @param Servicio $servicio
-   * @return void
-   */
-  private function notificarAdminNuevaCita(Cita $cita, Cliente $cliente, Servicio $servicio): void
-  {
-    try {
-      $subs = $this->webPushService->obtenerSuscripciones();
-      if (empty($subs)) {
-        error_log("Push Admin: 0 suscripciones activas encontradas.");
-        return;
-      }
-      error_log("Push Admin: " . count($subs) . " suscripciones encontradas.");
 
-      $horaFormato = self::formatearHoraAmPm(substr($cita->getHoraInicio(), 0, 5));
-      $telefonoTexto = $this->clienteRepo->descifrarTelefono($cliente) ?? 'Sin celular';
-
-      $uri = $_SERVER['REQUEST_URI'] ?? '';
-      $baseApp = str_starts_with($uri, '/casa-nei') ? '/casa-nei/' : '/';
-      $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-      $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-      $fullBase = "{$scheme}://{$host}{$baseApp}";
-
-      $urlAdmin = "{$fullBase}admin/agenda/?cita_id={$cita->getId()}";
-      $iconUrl = "{$fullBase}admin/agenda/icons/icon-192.png";
-
-      $payload = [
-        'title' => '🔔 Nueva Solicitud de Cita - Casa Nei',
-        'body' => "{$cliente->getNombreCompleto()} solicita {$servicio->getNombre()} ({$cita->getFechaCita()} a las {$horaFormato}). Verifica en WhatsApp el código [{$cita->getCodigoCita()}] antes de confirmar.",
-        'icon' => $iconUrl,
-        'badge' => $iconUrl,
-        'tag' => 'cita-' . $cita->getId(),
-        'renotify' => true,
-        'data' => [
-          'cita_id' => $cita->getId(),
-          'codigo_cita' => $cita->getCodigoCita(),
-          'paciente' => $cliente->getNombreCompleto(),
-          'telefono' => $telefonoTexto,
-          'servicio' => $servicio->getNombre(),
-          'fecha' => $cita->getFechaCita(),
-          'hora' => $horaFormato,
-          'tiene_whatsapp' => $cita->tieneWhatsapp(),
-          'canal' => $cita->getCanal(),
-          'url' => $urlAdmin
-        ]
-      ];
-
-      foreach ($subs as $sub) {
-        try {
-          $res = $this->webPushService->enviarNotificacion($sub, $payload);
-          error_log("Push Admin exitoso a {$sub['endpoint']}: HTTP " . $res['http_code']);
-        } catch (Throwable $e) {
-          error_log("Aviso: Notificación Web Push a Admin no entregada a endpoint {$sub['endpoint']}: " . $e->getMessage());
-        }
-      }
-    } catch (Throwable $e) {
-      error_log("Aviso: Error general al notificar Web Push a Admin: " . $e->getMessage());
-    }
-  }
-
-  /**
-   * Formatea una hora en formato HH:MM o HH:MM:SS a formato compacto am/pm (ej. 5pm, 1am, 9:30am).
-   *
-   * @param string $hora Hora en formato 'HH:MM' o 'HH:MM:SS'.
-   * @return string Hora formateada en minúsculas y sin espacio intermedio.
-   */
-  public static function formatearHoraAmPm(string $hora): string
-  {
-    $horaTrim = trim($hora);
-    if ($horaTrim === '') {
-      return '';
-    }
-
-    $dt = DateTime::createFromFormat('H:i:s', $horaTrim) ?: DateTime::createFromFormat('H:i', $horaTrim);
-    if (!$dt) {
-      return $hora;
-    }
-
-    $h = (int) $dt->format('g');
-    $m = (int) $dt->format('i');
-    $ampm = strtolower($dt->format('a'));
-
-    return $m === 0 ? "{$h}{$ampm}" : "{$h}:" . $dt->format('i') . $ampm;
-  }
-
-  /**
-   * Genera el texto del mensaje precargado de WhatsApp para enviar al Administrador.
-   */
-  private function generarMensajeSolicitudAdmin(
-    string $nombre,
-    string $telefono,
-    string $servicioNombre,
-    string $fecha,
-    string $horaInicio,
-    string $horaFin,
-    string $codigoCita,
-    ?string $notas = null
-  ): string {
-    $horarioFormato = self::formatearHoraAmPm($horaInicio) . ' - ' . self::formatearHoraAmPm($horaFin);
-
-    $msg = "*Solicitud de Cita - Casa Nei*\n\n";
-    $msg .= "• *Código:* {$codigoCita}\n";
-    $msg .= "• *Paciente:* {$nombre}\n";
-    if (!empty($telefono)) {
-      $msg .= "• *Teléfono:* {$telefono}\n";
-    }
-    $msg .= "• *Servicio:* {$servicioNombre}\n";
-    $msg .= "• *Fecha:* {$fecha}\n";
-    $msg .= "• *Horario:* {$horarioFormato}\n";
-
-    if ($notas !== null && trim($notas) !== '') {
-      $msg .= "• *Notas:* {$notas}\n";
-    }
-
-    return $msg;
-  }
-
-  /**
-   * Genera el mensaje precargado de WhatsApp con los datos de confirmación para el paciente.
-   */
-  private function generarMensajeConfirmacionCliente(
-    string $nombre,
-    string $servicioNombre,
-    string $fecha,
-    string $horaInicio,
-    string $codigoCita,
-    ?string $mensajeExtra = null
-  ): string {
-    $horaFormato = self::formatearHoraAmPm($horaInicio);
-
-    $msg = "*¡Tu cita en Casa Nei ha sido Confirmada!*\n\n";
-    $msg .= "Hola *{$nombre}*, te esperamos con gusto:\n\n";
-    $msg .= "• *Código:* {$codigoCita}\n";
-    $msg .= "• *Servicio:* {$servicioNombre}\n";
-    $msg .= "• *Fecha:* {$fecha}\n";
-    $msg .= "• *Hora:* {$horaFormato}\n";
-
-    if ($mensajeExtra !== null && trim($mensajeExtra) !== '') {
-      $msg .= "\n• *Indicaciones:* {$mensajeExtra}\n";
-    }
-
-    $msg .= "\nSi necesitas cualquier cambio, por favor avísanos con anticipación.";
-    return $msg;
-  }
-
-  /**
-   * Construye un enlace oficial de WhatsApp (wa.me) codificando el mensaje en UTF-8 seguro.
-   */
-  private function crearEnlaceWhatsapp(string $telefono, string $texto): string
-  {
-    $telefonoLimpio = preg_replace('/[^\d]/', '', $telefono);
-    $textoEncoded = rawurlencode($texto);
-    return "https://wa.me/{$telefonoLimpio}?text={$textoEncoded}";
-  }
 }

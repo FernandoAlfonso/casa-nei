@@ -76,6 +76,8 @@ use App\Agenda\Repositories\HorarioRepository;
 use App\Agenda\Repositories\ServicioRepository;
 use App\Agenda\Services\AgendaService;
 use App\Agenda\Services\DisponibilidadService;
+use App\Agenda\Services\NotificationService;
+use App\Agenda\Services\WhatsAppService;
 use App\Shared\Container\Container;
 use App\Shared\Db\DataBase;
 use App\Shared\Http\Request;
@@ -108,6 +110,13 @@ $container->singleton(CitaRepository::class, fn(Container $c) => new CitaReposit
 ));
 
 // 5.3 Servicios de Dominio y Negocio
+$container->singleton(WhatsAppService::class, fn(Container $c) => new WhatsAppService());
+
+$container->singleton(NotificationService::class, fn(Container $c) => new NotificationService(
+  webPushService: $c->get(WebPushService::class),
+  clienteRepo: $c->get(ClienteRepository::class)
+));
+
 $container->singleton(DisponibilidadService::class, fn(Container $c) => new DisponibilidadService(
   horarioRepo: $c->get(HorarioRepository::class),
   citaRepo: $c->get(CitaRepository::class),
@@ -120,7 +129,8 @@ $container->singleton(AgendaService::class, fn(Container $c) => new AgendaServic
   servicioRepo: $c->get(ServicioRepository::class),
   horarioRepo: $c->get(HorarioRepository::class),
   disponibilidadService: $c->get(DisponibilidadService::class),
-  webPushService: $c->get(WebPushService::class),
+  notificationService: $c->get(NotificationService::class),
+  whatsAppService: $c->get(WhatsAppService::class),
   db: $c->get(DataBase::class)
 ));
 
