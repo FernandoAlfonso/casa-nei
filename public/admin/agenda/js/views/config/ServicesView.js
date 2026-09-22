@@ -48,8 +48,10 @@ export default class ServicesView {
         html += `
           <div class="card" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; opacity: ${opacity};">
             <div>
-              <h3 style="font-size: 1.1rem;">${s.nombre}</h3>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">${s.duracion_minutos} minutos &bull; $${s.precio || '0'}</p>
+              <h3 style="font-size: 1.1rem; margin-bottom: 4px;">${s.nombre}</h3>
+              ${s.descripcion ? `<p style="font-size: 0.9rem; margin-bottom: 6px;">${s.descripcion}</p>` : ''}
+              ${s.instrucciones ? `<p style="font-size: 0.85rem; color: var(--primary); margin-bottom: 6px;"><small>Instrucciones: ${s.instrucciones}</small></p>` : ''}
+              <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">${s.duracion_minutos} minutos &bull; $${s.precio || '0'}</p>
             </div>
             <button class="btn btn-secondary btn-edit" data-id="${s.id}" style="width: auto; padding: 8px 12px;">Editar</button>
           </div>
@@ -96,11 +98,11 @@ export default class ServicesView {
           </div>
           <div class="form-group">
             <label class="form-label">Descripción</label>
-            <textarea id="srv_descripcion" class="form-input" rows="2">${descripcion}</textarea>
+            <textarea id="srv_descripcion" class="form-input" rows="2"></textarea>
           </div>
           <div class="form-group">
             <label class="form-label">Instrucciones</label>
-            <textarea id="srv_instrucciones" class="form-input" rows="2">${instrucciones}</textarea>
+            <textarea id="srv_instrucciones" class="form-input" rows="2"></textarea>
           </div>
           <div style="display: flex; gap: 16px;">
             <div class="form-group" style="flex: 1;">
@@ -124,6 +126,10 @@ export default class ServicesView {
       </div>
     `;
     document.body.appendChild(overlay);
+
+    // Safely set textarea values to avoid HTML parsing issues
+    document.getElementById('srv_descripcion').value = descripcion;
+    document.getElementById('srv_instrucciones').value = instrucciones;
 
     document.getElementById('btnCancelModal').addEventListener('click', () => {
       document.body.removeChild(overlay);

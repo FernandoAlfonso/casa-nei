@@ -31,24 +31,21 @@ export default class Router {
     // Instanciate new view
     this.currentView = new viewClass();
     
-    // Fade out current content
-    this.appRoot.style.opacity = '0';
-    
-    // Tiny delay for fade effect
-    await new Promise(r => setTimeout(r, 150));
-    
-    // Render and mount new content
-    this.appRoot.innerHTML = this.currentView.render();
-    if (typeof this.currentView.mount === 'function') {
-      this.currentView.mount();
-    }
-    
-    // Fade in
-    this.appRoot.style.transition = 'opacity 0.2s ease-in-out';
-    this.appRoot.style.opacity = '1';
+    const renderNewView = () => {
+      this.appRoot.innerHTML = this.currentView.render();
+      if (typeof this.currentView.mount === 'function') {
+        this.currentView.mount();
+      }
+      // Update Navigation UI
+      this.updateNavUI(hash);
+    };
 
-    // Update Navigation UI
-    this.updateNavUI(hash);
+    // Use View Transitions API if supported for instant native feeling, else just render immediately
+    if (document.startViewTransition) {
+      document.startViewTransition(() => renderNewView());
+    } else {
+      renderNewView();
+    }
   }
 
   updateNavUI(activeHash) {
