@@ -81,8 +81,8 @@ export default class HomeView {
           </div>
 
           <div style="display: flex; gap: 10px;">
-            <button class="btn btn-accept" data-id="${cita.id}" style="flex: 1; padding: 10px; font-size: 0.9rem;">✅ Aceptar</button>
-            <button class="btn btn-secondary btn-reject" data-id="${cita.id}" style="flex: 1; padding: 10px; font-size: 0.9rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">❌ Rechazar</button>
+            <button class="btn btn-accept" data-id="${cita.cita_id}" style="flex: 1; padding: 10px; font-size: 0.9rem;">✅ Aceptar</button>
+            <button class="btn btn-secondary btn-reject" data-id="${cita.cita_id}" style="flex: 1; padding: 10px; font-size: 0.9rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">❌ Rechazar</button>
           </div>
         </div>
       `;

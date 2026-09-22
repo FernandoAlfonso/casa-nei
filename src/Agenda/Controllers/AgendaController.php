@@ -434,7 +434,7 @@ class AgendaController
   public function confirmarCita(Request $request): void
   {
     try {
-      $citaId = (int) $request->get('cita_id', 0);
+      $citaId = (int) ($request->get('cita_id') ?: $request->get('id', 0));
       $mensaje = $request->get('mensaje_admin');
 
       if ($citaId <= 0) {
@@ -468,7 +468,7 @@ class AgendaController
   public function cancelarCita(Request $request): void
   {
     try {
-      $citaId = (int) $request->get('cita_id', 0);
+      $citaId = (int) ($request->get('cita_id') ?: $request->get('id', 0));
       $motivo = $request->get('motivo');
 
       if ($citaId <= 0) {
@@ -502,7 +502,7 @@ class AgendaController
   public function actualizarCita(Request $request): void
   {
     try {
-      $citaId = (int) $request->get('cita_id', 0);
+      $citaId = (int) ($request->get('cita_id') ?: $request->get('id', 0));
       $nuevaFecha = trim((string) $request->get('nueva_fecha', ''));
       $nuevaHora = trim((string) $request->get('nueva_hora', ''));
       $servicioId = $request->get('servicio_id') ? (int) $request->get('servicio_id') : null;

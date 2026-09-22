@@ -113,7 +113,7 @@ export default class NewCitaView {
     this.btnSubmit.innerHTML = 'Agendando...';
 
     try {
-      const response = await ApiService.post('/admin/citas', payload);
+      const response = await ApiService.post('/admin/citas/agendar', payload);
 
       if (response.data && response.data.whatsapp_url) {
         window.open(response.data.whatsapp_url, '_blank');

@@ -274,6 +274,7 @@ class CitaRepository
             ORDER BY c.fecha_cita ASC, c.hora_inicio ASC";
 
     return $this->db->fetchAll($sql, [], function (array $row): array {
+      $row['id'] = (int) $row['cita_id'];
       $encryptedPhone = $row['telefono_encriptado'] ?? null;
       $row['cliente_telefono'] = (!empty($encryptedPhone)) ? $this->crypto->decrypt($encryptedPhone) : null;
       unset($row['telefono_encriptado']);
@@ -325,6 +326,7 @@ class CitaRepository
     $sql .= " ORDER BY c.fecha_cita ASC, c.hora_inicio ASC";
 
     return $this->db->fetchAll($sql, $params, function (array $row): array {
+      $row['id'] = (int) $row['cita_id'];
       $encryptedPhone = $row['telefono_encriptado'] ?? null;
       $row['cliente_telefono'] = (!empty($encryptedPhone)) ? $this->crypto->decrypt($encryptedPhone) : null;
       unset($row['telefono_encriptado']);

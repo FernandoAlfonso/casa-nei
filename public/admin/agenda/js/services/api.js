@@ -38,7 +38,7 @@ export default class ApiService {
           localStorage.removeItem('admin_token');
           window.location.hash = '#login';
         }
-        throw new Error(data.message || 'Error en la petición');
+        throw new Error(data.error || data.message || 'Error en la petición');
       }
 
       return data;

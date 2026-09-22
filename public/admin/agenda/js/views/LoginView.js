@@ -16,7 +16,7 @@ export default class LoginView {
             <div id="loginError" style="display: none; color: var(--danger); background: var(--danger-glow); padding: 12px; border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 16px; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
             <div class="form-group">
               <label class="form-label">Contraseña de Administrador</label>
-              <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+              <input type="password" id="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
             </div>
             <button type="submit" id="btnSubmit" class="btn">Ingresar</button>
           </form>
@@ -49,7 +49,7 @@ export default class LoginView {
         const data = await response.json();
         
         if (!response.ok) {
-          throw new Error(data.message || 'Contraseña incorrecta');
+          throw new Error(data.error || data.message || 'Contraseña incorrecta');
         }
 
         // Store token
