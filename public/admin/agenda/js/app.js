@@ -59,11 +59,33 @@ document.addEventListener('DOMContentLoaded', () => {
     await originalHandleRoute();
   };
 
+  // Verificar si venimos de un tap de notificación en iOS Web Push
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetCitaId = urlParams.get('target_cita');
+  if (targetCitaId) {
+    // Reemplazar la URL base eliminando el query param y colocando el hash
+    window.history.replaceState({}, document.title, window.location.pathname);
+    window.location.hash = `#solicitud?id=${targetCitaId}`;
+  }
+
   // Initialize Router
   router.init();
 
-  // Register Service Worker
+  // Escuchar mensajes del Service Worker para navegar cuando la app está en segundo plano (Especial para iOS)
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'NAVIGATE') {
+        const urlObj = new URL(event.data.url, window.location.origin);
+        // Si tiene el query param target_cita, lo procesamos
+        const targetId = urlObj.searchParams.get('target_cita');
+        if (targetId) {
+          window.location.hash = `#solicitud?id=${targetId}`;
+        } else if (urlObj.hash) {
+          window.location.hash = urlObj.hash;
+        }
+      }
+    });
+
     navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(registration => {
         console.log('Service Worker registrado con éxito:', registration.scope);

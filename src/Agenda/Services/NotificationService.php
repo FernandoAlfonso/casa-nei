@@ -46,7 +46,7 @@ class NotificationService
             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
             $fullBase = "{$scheme}://{$host}{$baseApp}";
 
-            $urlAdmin = "{$fullBase}admin/agenda/#solicitud?id={$cita->getId()}";
+            $urlAdmin = "{$fullBase}admin/agenda/?target_cita={$cita->getId()}";
             $iconUrl = "{$fullBase}admin/agenda/icons/icon-192.png";
 
             $payload = [

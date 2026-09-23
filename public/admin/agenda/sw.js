@@ -53,11 +53,8 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let client of windowClients) {
         if (client.url.includes(scope) && 'focus' in client) {
-          if ('navigate' in client) {
-            return client.navigate(targetUrl).then(c => c.focus());
-          } else {
-            return client.focus();
-          }
+          client.postMessage({ type: 'NAVIGATE', url: targetUrl });
+          return client.focus();
         }
       }
       if (clients.openWindow) {
