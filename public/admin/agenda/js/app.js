@@ -5,6 +5,7 @@ import CalendarView from './views/CalendarView.js';
 import SettingsView from './views/SettingsView.js';
 import NewCitaView from './views/NewCitaView.js';
 import PushService from './services/push.js';
+import SolicitudDetalleView from './views/SolicitudDetalleView.js';
 
 import ServicesView from './views/config/ServicesView.js';
 import HorariosView from './views/config/HorariosView.js';
@@ -17,6 +18,7 @@ const routes = {
   'calendar': CalendarView,
   'settings': SettingsView,
   'new-cita': NewCitaView,
+  'solicitud': SolicitudDetalleView,
   'settings/servicios': ServicesView,
   'settings/horarios': HorariosView,
   'settings/bloqueos': BloqueosView
@@ -30,19 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const originalHandleRoute = router.handleRoute.bind(router);
   
   router.handleRoute = async () => {
-    const hash = window.location.hash.substring(1) || 'home';
+    const rawHash = window.location.hash.substring(1) || 'home';
+    const path = rawHash.split('?')[0];
     const token = localStorage.getItem('admin_token');
     const mainNav = document.getElementById('mainNav');
     const topNav = document.getElementById('topNav');
 
     // Protect all routes except login
-    if (!token && hash !== 'login') {
+    if (!token && path !== 'login') {
       window.location.hash = '#login';
       return;
     }
 
     // Toggle Navigation visibility
-    if (hash === 'login') {
+    if (path === 'login') {
       mainNav.classList.add('hidden');
       topNav.classList.add('hidden');
     } else {
@@ -75,11 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
     PushService.subscribeDevice().catch(e => console.error("Auto-subscribe failed:", e));
   }
 
-  // Autosize textareas globally as user types
+  // Autosize textareas globally with debounce to avoid main thread blocking
+  let debounceTimer;
   document.addEventListener('input', (e) => {
     if (e.target.tagName && e.target.tagName.toLowerCase() === 'textarea') {
-      e.target.style.height = 'auto';
-      e.target.style.height = e.target.scrollHeight + 'px';
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+      }, 50); // 50ms debounce
     }
   }, false);
 });

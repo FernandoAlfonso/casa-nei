@@ -20,8 +20,19 @@ export default class Router {
   }
 
   async handleRoute() {
-    const hash = window.location.hash.substring(1) || 'home';
-    const viewClass = this.routes[hash] || this.routes['home'];
+    const rawHash = window.location.hash.substring(1) || 'home';
+    const [path, queryString] = rawHash.split('?');
+    
+    // Parse query string into an object
+    const queryParams = {};
+    if (queryString) {
+      const urlParams = new URLSearchParams(queryString);
+      for (const [key, value] of urlParams.entries()) {
+        queryParams[key] = value;
+      }
+    }
+
+    const viewClass = this.routes[path] || this.routes['home'];
 
     // Unmount current view if it has cleanup logic
     if (this.currentView && typeof this.currentView.unmount === 'function') {
@@ -34,10 +45,10 @@ export default class Router {
     const renderNewView = () => {
       this.appRoot.innerHTML = this.currentView.render();
       if (typeof this.currentView.mount === 'function') {
-        this.currentView.mount();
+        this.currentView.mount(queryParams);
       }
       // Update Navigation UI
-      this.updateNavUI(hash);
+      this.updateNavUI(path);
     };
 
     // Use View Transitions API if supported for instant native feeling, else just render immediately
