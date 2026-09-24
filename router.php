@@ -28,8 +28,8 @@ if (str_starts_with($uri, '/api')) {
     return true;
 }
 
-// Si la ruta inicia con /descargar/, mostrar la vista de descarga (Pretty URL local)
-if (str_starts_with($uri, '/descargar/')) {
+// Si la ruta inicia con /descarga/, mostrar la vista de descarga (Pretty URL local)
+if (str_starts_with($uri, '/descarga/')) {
     require __DIR__ . '/public/descarga.html';
     return true;
 }

@@ -155,10 +155,10 @@
             const urlParams = new URLSearchParams(window.location.search);
             let docId = urlParams.get('doc');
             
-            // Si no hay query param, tratar de leer de la pretty URL (/descargar/algo)
+            // Si no hay query param, tratar de leer de la pretty URL (/descarga/algo)
             if (!docId) {
                 const pathParts = window.location.pathname.split('/').filter(p => p);
-                const descIndex = pathParts.indexOf('descargar');
+                const descIndex = pathParts.indexOf('descarga');
                 if (descIndex !== -1 && pathParts.length > descIndex + 1) {
                     docId = pathParts[descIndex + 1];
                 }
