@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Asumiendo que el sitio se sirve bajo la carpeta /casa-nei/
+    RewriteBase /casa-nei/
+
+    # Si la URL empieza por descargar/, redirigir internamente a descarga.html
+    # Ejemplo: /casa-nei/descargar/tres-dan-tian -> descarga.html
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^descargar/([a-zA-Z0-9-]+)/?$ descarga.html?doc=$1 [L,QSA]
+</IfModule>

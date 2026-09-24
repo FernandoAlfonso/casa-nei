@@ -28,6 +28,12 @@ if (str_starts_with($uri, '/api')) {
     return true;
 }
 
+// Si la ruta inicia con /descargar/, mostrar la vista de descarga (Pretty URL local)
+if (str_starts_with($uri, '/descargar/')) {
+    require __DIR__ . '/public/descarga.html';
+    return true;
+}
+
 // Si es la raíz / o cualquier otra página estática por defecto
 if ($uri === '/' && file_exists(__DIR__ . '/public/index.html')) {
     return false;

@@ -12,7 +12,7 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260923">
+    <link rel="stylesheet" href="/casa-nei/style.css?v=20260923">
     <style>
         .download-container {
             padding: 120px 20px 60px;
@@ -72,7 +72,7 @@
     <!-- Navbar -->
     <nav class="navbar">
         <a href="/casa-nei/" class="logo">
-            <img src="logo.jpg" alt="Casa Nei Logo" style="height: 60px; border-radius: 12px;">
+            <img src="/casa-nei/logo.jpg" alt="Casa Nei Logo" style="height: 60px; border-radius: 12px;">
             <span style="display: none;">Casa Nei</span>
         </a>
         <ul class="nav-links">
@@ -92,7 +92,7 @@
         <p class="resource-desc" id="res-desc">Por favor espera un momento.</p>
 
         <a id="res-img-link" href="#" download style="display: none; border: none; text-decoration: none;">
-            <img id="res-cover" src="pdfs/pdf-icon.svg" alt="Icono de PDF" class="pdf-icon">
+            <img id="res-cover" src="/casa-nei/pdfs/pdf-icon.svg" alt="Icono de PDF" class="pdf-icon">
         </a>
 
         <div style="margin-top: 1rem;">
@@ -151,14 +151,24 @@
          * Permite reutilizar esta misma vista para otros PDFs en el futuro.
          */
         document.addEventListener('DOMContentLoaded', () => {
+            // Leer de ?doc=algo
             const urlParams = new URLSearchParams(window.location.search);
-            const docId = urlParams.get('doc');
+            let docId = urlParams.get('doc');
+            
+            // Si no hay query param, tratar de leer de la pretty URL (/descargar/algo)
+            if (!docId) {
+                const pathParts = window.location.pathname.split('/').filter(p => p);
+                const descIndex = pathParts.indexOf('descargar');
+                if (descIndex !== -1 && pathParts.length > descIndex + 1) {
+                    docId = pathParts[descIndex + 1];
+                }
+            }
 
             const resources = {
                 'tres-dan-tian': {
                     title: 'Los Tres Dan Tian: Manual Básico de Chi Kung. Casa Nei.',
                     desc: 'Conoce estos 3 centros energéticos y cómo empezar a trabajarlos.',
-                    pdf: 'pdfs/tres-dan-tian-manual-basico.pdf'
+                    pdf: '/casa-nei/pdfs/tres-dan-tian-manual-basico.pdf'
                 }
             };
 
