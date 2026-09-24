@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" width="100%" height="100%">
+    <!-- Document Base -->
+    <path d="M20,10 L65,10 L90,35 L90,110 C90,113.3 87.3,116 84,116 L20,116 C16.7,116 14,113.3 14,110 L14,16 C14,12.7 16.7,10 20,10 Z" fill="#ffffff" stroke="#e74c3c" stroke-width="6" stroke-linejoin="round"/>
+    <!-- Fold -->
+    <path d="M65,10 L65,35 L90,35 Z" fill="#f9e3e3" stroke="#e74c3c" stroke-width="6" stroke-linejoin="round"/>
+    <!-- PDF Text Background -->
+    <rect x="22" y="60" width="60" height="30" rx="4" fill="#e74c3c" />
+    <!-- PDF Text -->
+    <text x="52" y="81" font-family="'Inter', 'Outfit', sans-serif" font-size="20" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="2">PDF</text>
+</svg>
