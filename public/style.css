@@ -340,7 +340,8 @@ section {
 
 /* Purpose Section */
 .about-purpose {
-  background-color: #f5efe9; /* Soft premium warm linen background */
+  background-color: #f5efe9;
+  /* Soft premium warm linen background */
 }
 
 .about-purpose .card {
@@ -676,10 +677,21 @@ section {
   border-radius: 4px;
 }
 
-.badge.disponible { background: #10b981; }
-.badge.pendiente { background: #f59e0b; }
-.badge.ocupado { background: #ef4444; }
-.badge.cerrado { background: #9ca3af; }
+.badge.disponible {
+  background: #10b981;
+}
+
+.badge.pendiente {
+  background: #f59e0b;
+}
+
+.badge.ocupado {
+  background: #ef4444;
+}
+
+.badge.cerrado {
+  background: #9ca3af;
+}
 
 .agenda-legend-notice {
   display: flex;
@@ -910,7 +922,8 @@ section {
   display: grid;
   grid-template-columns: 1fr 1.3fr;
   gap: 2.5rem;
-  align-items: start; /* Alineación superior (align-top) para sincronizar altura de tarjetas */
+  align-items: start;
+  /* Alineación superior (align-top) para sincronizar altura de tarjetas */
 }
 
 .agenda-summary-card {
@@ -988,7 +1001,8 @@ section {
 .agenda-form-card {
   background: var(--surface-color);
   align-self: start;
-  padding: 0; /* Anula el padding: 6rem 5% de la etiqueta section */
+  padding: 0;
+  /* Anula el padding: 6rem 5% de la etiqueta section */
 }
 
 .agenda-form-card h4 {
@@ -1168,7 +1182,7 @@ section {
 /* Pantalla de Éxito */
 .agenda-success-card {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 1.2rem 1rem;
 }
 
 .agenda-success-card .success-icon {
@@ -1227,8 +1241,8 @@ section {
   font-size: 1.05rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.85rem 1.8rem;
+  gap: 0.3rem;
+  padding: 0.85rem .85rem;
 }
 
 .btn-whatsapp-direct:hover {
@@ -1291,6 +1305,7 @@ section {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

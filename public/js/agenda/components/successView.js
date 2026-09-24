@@ -18,26 +18,20 @@ export function renderSuccessView(data) {
   const horaTexto = formatTimeAmPm(data.hora_inicio || '');
   const safeUrl = isSafeWhatsAppUrl(data.whatsapp_url) ? data.whatsapp_url : '#';
 
-  return `
+  return /* html */`
     <div class="agenda-success-card animate-fade-in" role="region" aria-label="Confirmación de cita registrada">
       <div class="success-icon" aria-hidden="true">
         <i class="fab fa-whatsapp"></i>
       </div>
 
-      <h2>¡Cita Registrada con Éxito!</h2>
-      <p class="success-code">Código de Seguimiento: <strong>${codigo}</strong></p>
-
-      <p class="success-desc">
-        Tu solicitud para <strong>${servicioNombre}</strong> el día 
-        <strong>${fechaTexto}</strong> a las <strong>${horaTexto}</strong> 
-        ha sido registrada y está <em>Pendiente de confirmación</em> por el administrador.
-      </p>
-
       <!-- Caja de acción de WhatsApp (Interacción directa sin bloqueo de pop-ups) -->
       <div class="whatsapp-action-box">
         <p>
           <i class="fas fa-info-circle" aria-hidden="true"></i> 
-          Hemos preparado tu mensaje de confirmación. Presiona el botón a continuación para abrir WhatsApp y enviárselo directamente al terapeuta:
+          Hemos preparado tu mensaje de solicitud para enviar por Whatsapp. 
+        </p>
+        <p>
+          A continuación presiona el botón para abrirlo y enviárselo directamente al terapeuta:
         </p>
 
         <a href="${safeUrl}" 
@@ -49,6 +43,16 @@ export function renderSuccessView(data) {
           <i class="fab fa-whatsapp" aria-hidden="true"></i> Abrir WhatsApp y Enviar Solicitud
         </a>
       </div>
+      <br>
+
+      <h3>¡Se ha registrado la solicitud con Éxito!</h3>
+      <p class="success-code">Código de Seguimiento: <strong>${codigo}</strong></p>
+
+      <p class="success-desc">
+        Tu solicitud para <strong>${servicioNombre}</strong> el día 
+        <strong>${fechaTexto}</strong> a las <strong>${horaTexto}</strong> 
+        ha sido registrada y está <em>Pendiente de confirmación</em> por el terapeuta. Espera su confirmación.
+      </p>
 
       <div style="margin-top: 2rem;">
         <button type="button" class="btn-secondary" id="btn-agendar-otra">
