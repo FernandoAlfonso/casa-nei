@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descargar Recurso | Casa Nei</title>
+    <meta name="description" content="Descarga tu manual gratuito y material exclusivo de Casa Nei.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=20260923">
+    <style>
+        .download-container {
+            padding: 120px 20px 60px;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .cover-image {
+            max-width: 100%;
+            width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .cover-image:hover {
+            transform: translateY(-5px);
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            padding: 1rem 2.5rem;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .resource-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            color: var(--primary-color, #2c3e50);
+            margin-bottom: 1rem;
+        }
+
+        .resource-desc {
+            color: var(--text-color, #333);
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        #error-msg {
+            display: none;
+            padding: 120px 20px;
+            text-align: center;
+            color: var(--text-muted, #777);
+            min-height: 60vh;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <img src="logo.jpg" alt="Casa Nei Logo" style="height: 60px; border-radius: 12px;">
+            <span style="display: none;">Casa Nei</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="/#inicio">Inicio</a></li>
+            <li><a href="/#servicios">Servicios</a></li>
+            <li><a href="/#cursos">Cursos</a></li>
+            <li><a href="/#quien-soy">Quién soy</a></li>
+            <li><a href="/#nosotros">Nosotros</a></li>
+            <li><a href="/#contacto">Contacto</a></li>
+        </ul>
+        <a href="/#agenda" class="btn-primary">Agenda una cita</a>
+    </nav>
+
+    <!-- Main Content -->
+    <section id="download-section" class="download-container">
+        <h1 class="resource-title" id="res-title">Cargando...</h1>
+        <p class="resource-desc" id="res-desc">Por favor espera un momento.</p>
+
+        <img id="res-cover" src="" alt="Portada del manual" class="cover-image" style="display: none;">
+
+        <div style="margin-top: 1rem;">
+            <a id="res-download-btn" href="#" class="btn-primary download-btn" download style="display: none;">
+                <i class="fas fa-download"></i> Descargar PDF
+            </a>
+        </div>
+    </section>
+
+    <!-- Error State -->
+    <section id="error-msg">
+        <h2>Recurso no encontrado</h2>
+        <p>El enlace parece estar roto o el recurso ya no está disponible.</p>
+        <a href="/" class="btn-secondary" style="margin-top: 1rem; display: inline-block;">Volver al inicio</a>
+    </section>
+
+    <!-- Footer / Contacto -->
+    <footer id="contacto" class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <a href="/#inicio" class="logo" style="color: white; margin-bottom: 1rem; display: block;">Casa Nei</a>
+                <p>Un espacio abierto al conocimiento, la salud integral y la filosofía taoísta.</p>
+                <div class="social-links">
+                    <a href="https://www.facebook.com/renatoothon.garcia" target="_blank" class="social-icon"
+                        aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/casanei_colima/" target="_blank" class="social-icon"
+                        aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://wa.me/523121064455" target="_blank" class="social-icon" aria-label="WhatsApp"><i
+                            class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4>Contacto</h4>
+                <p><i class="fas fa-map-marker-alt" style="width: 20px;"></i> Ramón Lopez Velarde #621,
+                    Jardines de las Lomas, Colima, Colima, México</p>
+                <p><i class="fas fa-phone" style="width: 20px;"></i> +52 (312) 106-4455</p>
+                <p><i class="fas fa-envelope" style="width: 20px;"></i> casaneicolima@gmail.com</p>
+            </div>
+            <div class="footer-section">
+                <h4>Horarios</h4>
+                <p>Lunes - Viernes: 9am - 1pm, 6pm - 9pm</p>
+                <p>Sábados: 10am - 2pm</p>
+                <p>Domingos: Precio extra</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Casa Nei. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Logic -->
+    <script>
+        /**
+         * Maneja la carga dinámica de recursos basados en la URL.
+         * Permite reutilizar esta misma vista para otros PDFs en el futuro.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const docId = urlParams.get('doc');
+
+            // Base de datos de recursos (escalable para el futuro)
+            const resources = {
+                'tres-dan-tian': {
+                    title: 'Los Tres Dan Tian: Manual Básico',
+                    desc: 'Aprende los fundamentos de la Medicina Tradicional China, el Taoísmo y la filosofía de Casa Nei.',
+                    cover: 'pdfs/tres-dan-tian-portada.jpg',
+                    pdf: 'pdfs/tres-dan-tian-manual-basico.pdf'
+                }
+            };
+
+            // Fallback: si entran a /descarga.html sin parámetros, mostramos el manual por defecto
+            // para que los enlaces simples compartidos en redes sigan funcionando.
+            const activeResource = resources[docId] || resources['tres-dan-tian'];
+
+            if (activeResource) {
+                document.getElementById('res-title').textContent = activeResource.title;
+                document.getElementById('res-desc').textContent = activeResource.desc;
+                
+                const coverImg = document.getElementById('res-cover');
+                coverImg.src = activeResource.cover;
+                coverImg.style.display = 'inline-block';
+                
+                const downloadBtn = document.getElementById('res-download-btn');
+                downloadBtn.href = activeResource.pdf;
+                downloadBtn.style.display = 'inline-flex';
+            } else {
+                document.getElementById('download-section').style.display = 'none';
+                document.getElementById('error-msg').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+
+</html>
