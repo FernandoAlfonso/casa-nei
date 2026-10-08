@@ -49,7 +49,7 @@ export default class ApiService {
   }
 
   static async get(endpoint) {
-    return this.request(endpoint, { method: 'GET' });
+    return this.request(endpoint, { method: 'GET', cache: 'no-store' });
   }
 
   static async post(endpoint, body) {

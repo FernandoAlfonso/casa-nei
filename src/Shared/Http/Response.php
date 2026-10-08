@@ -28,6 +28,10 @@ class Response
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
+    // Deshabilitar caché agresivo en navegadores móviles (como iOS/Safari)
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+
     // JSON_UNESCAPED_SLASHES previene escapar URLs como https:\/\/wa.me\... ahorrando bytes.
     // JSON_UNESCAPED_UNICODE mantiene tildes y caracteres en UTF-8 nativo.
     $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
