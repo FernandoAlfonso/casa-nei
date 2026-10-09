@@ -75,51 +75,57 @@ class HorarioRepository
   }
 
   /**
-   * Actualiza un horario semanal existente.
+   * Reemplaza todos los horarios de atención para un día específico.
    *
-   * @param int $id
-   * @param string $horaInicio
-   * @param string $horaFin
-   * @param bool $activo
+   * @param int $diaSemana Día de la semana (0 a 6).
+   * @param array $horarios Arreglo de arreglos asociativos con 'hora_inicio' y 'hora_fin'.
+   * @param bool $activo Si el día está activo.
    * @return bool
    */
-  public function actualizarSemanal(int $id, string $horaInicio, string $horaFin, bool $activo): bool
+  public function reemplazarHorariosDia(int $diaSemana, array $horarios, bool $activo): bool
   {
-    $sql = "UPDATE horarios_atencion 
-            SET hora_inicio = ?, hora_fin = ?, activo = ? 
-            WHERE id = ?";
-    
-    $actualizado = $this->db->execute($sql, [$horaInicio, $horaFin, $activo ? 1 : 0, $id]) > 0;
-    
-    if ($actualizado) {
-      $this->invalidarCache();
+    $this->db->execute("DELETE FROM horarios_atencion WHERE dia_semana = ?", [$diaSemana]);
+
+    if (!$activo || empty($horarios)) {
+      $this->db->execute("INSERT INTO horarios_atencion (dia_semana, hora_inicio, hora_fin, activo) VALUES (?, '09:00:00', '18:00:00', 0)", [$diaSemana]);
+    } else {
+      $sql = "INSERT INTO horarios_atencion (dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, 1)";
+      foreach ($horarios as $h) {
+        $this->db->execute($sql, [$diaSemana, $h['hora_inicio'], $h['hora_fin']]);
+      }
     }
     
-    return $actualizado;
+    $this->invalidarCache();
+    
+    return true;
   }
 
   /**
-   * Obtiene el horario de atención para un día de la semana específico (0=Domingo, 1=Lunes, ...).
+   * Obtiene los horarios de atención para un día de la semana específico (0=Domingo, 1=Lunes, ...).
    * Consulta primero los horarios semanales en memoria/disco antes de recurrir a la base de datos.
    *
    * @param int $diaSemana Número de día de la semana (0 a 6).
-   * @return HorarioAtencion|null Entidad HorarioAtencion si labora ese día o null si no labora.
+   * @return HorarioAtencion[] Arreglo de entidades HorarioAtencion activas para ese día.
    */
-  public function obtenerPorDiaSemana(int $diaSemana): ?HorarioAtencion
+  public function obtenerPorDiaSemana(int $diaSemana): array
   {
     $horarios = $this->obtenerHorariosSemanales();
+    $resultados = [];
     foreach ($horarios as $h) {
       if ($h->getDiaSemana() === $diaSemana) {
-        return $h;
+        $resultados[] = $h;
       }
+    }
+
+    if (!empty($resultados)) {
+      return $resultados;
     }
 
     $sql = "SELECT id, dia_semana, hora_inicio, hora_fin, activo 
             FROM horarios_atencion 
-            WHERE dia_semana = ? AND activo = 1 
-            LIMIT 1";
+            WHERE dia_semana = ? AND activo = 1";
 
-    return $this->db->fetchOne($sql, [$diaSemana], fn(array $row) => HorarioAtencion::fromArray($row));
+    return $this->db->fetchAll($sql, [$diaSemana], fn(array $row) => HorarioAtencion::fromArray($row));
   }
 
   /**

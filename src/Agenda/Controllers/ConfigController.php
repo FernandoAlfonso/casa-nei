@@ -114,16 +114,17 @@ class ConfigController
   public function actualizarHorario(Request $request): void
   {
     try {
-      $id = (int) $request->get('id');
-      $horaInicio = (string) $request->get('hora_inicio');
-      $horaFin = (string) $request->get('hora_fin');
+      $diaSemana = $request->get('dia_semana');
+      $horarios = $request->get('horarios');
       $activo = (bool) $request->get('activo');
 
-      if (!$id || empty($horaInicio) || empty($horaFin)) {
-        Response::error("Datos de horario incompletos", 400);
+      if ($diaSemana === null) {
+        Response::error("Día de la semana requerido", 400);
       }
+      
+      $horarios = is_array($horarios) ? $horarios : [];
 
-      $this->horarioRepo->actualizarSemanal($id, $horaInicio, $horaFin, $activo);
+      $this->horarioRepo->reemplazarHorariosDia((int)$diaSemana, $horarios, $activo);
       Response::success([], "Horario actualizado con éxito");
     } catch (Throwable $e) {
       Response::error("Error al actualizar horario: " . $e->getMessage(), 500);

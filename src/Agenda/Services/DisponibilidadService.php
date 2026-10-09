@@ -89,7 +89,7 @@ class DisponibilidadService
     // Cargar horarios semanales, bloqueos y citas en el rango
     $horariosSemanales = [];
     foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
-      $horariosSemanales[$h->getDiaSemana()] = $h;
+      $horariosSemanales[$h->getDiaSemana()][] = $h;
     }
 
     $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
@@ -140,7 +140,7 @@ class DisponibilidadService
         continue;
       }
 
-      $horarioDia = $horariosSemanales[$diaSemana];
+      $horariosDia = $horariosSemanales[$diaSemana];
 
       // 2. Validar si hay un bloqueo total de todo el día
       $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
@@ -169,14 +169,18 @@ class DisponibilidadService
       }
 
       // 3. Calcular slots libres del día
-      $slots = $this->generarSlotsDisponibles(
-        $fechaStr,
-        $horarioDia->getHoraInicio(),
-        $horarioDia->getHoraFin(),
-        $duracionMinutos,
-        $bloqueosDia,
-        $citasPorFecha[$fechaStr] ?? []
-      );
+      $slots = [];
+      foreach ($horariosDia as $turno) {
+        $slotsTurno = $this->generarSlotsDisponibles(
+          $fechaStr,
+          $turno->getHoraInicio(),
+          $turno->getHoraFin(),
+          $duracionMinutos,
+          $bloqueosDia,
+          $citasPorFecha[$fechaStr] ?? []
+        );
+        $slots = array_merge($slots, $slotsTurno);
+      }
 
       $citasDia = $citasPorFecha[$fechaStr] ?? [];
       $tienePendientes = false;
@@ -278,7 +282,7 @@ class DisponibilidadService
     // Cargar horarios semanales configurados (Lunes a Sábado)
     $horariosSemanales = [];
     foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
-      $horariosSemanales[$h->getDiaSemana()] = $h;
+      $horariosSemanales[$h->getDiaSemana()][] = $h;
     }
 
     $diasEncontrados = [];
@@ -326,7 +330,7 @@ class DisponibilidadService
           continue;
         }
 
-        $horarioDia = $horariosSemanales[$diaSemana];
+        $horariosDia = $horariosSemanales[$diaSemana];
 
         // 2. Omitir si hay un bloqueo de día completo (ej. festivos, vacaciones)
         $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
@@ -342,14 +346,18 @@ class DisponibilidadService
         }
 
         // 3. Generar slots de horarios disponibles para este día
-        $slots = $this->generarSlotsDisponibles(
-          $fechaStr,
-          $horarioDia->getHoraInicio(),
-          $horarioDia->getHoraFin(),
-          $duracionMinutos,
-          $bloqueosDia,
-          $citasPorFecha[$fechaStr] ?? []
-        );
+        $slots = [];
+        foreach ($horariosDia as $turno) {
+          $slotsTurno = $this->generarSlotsDisponibles(
+            $fechaStr,
+            $turno->getHoraInicio(),
+            $turno->getHoraFin(),
+            $duracionMinutos,
+            $bloqueosDia,
+            $citasPorFecha[$fechaStr] ?? []
+          );
+          $slots = array_merge($slots, $slotsTurno);
+        }
 
         // Si tiene al menos 1 horario libre, lo agregamos como día disponible garantizado
         if (count($slots) > 0) {
@@ -407,8 +415,8 @@ class DisponibilidadService
     $fechaObj = new DateTime($fecha);
     $diaSemana = (int) $fechaObj->format('w');
 
-    $horarioDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
-    if (!$horarioDia) {
+    $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
+    if (empty($horariosDia)) {
       return [];
     }
 
@@ -424,14 +432,19 @@ class DisponibilidadService
       EstadoCita::CONFIRMADA->value
     ]);
 
-    return $this->generarSlotsDisponibles(
-      $fecha,
-      $horarioDia->getHoraInicio(),
-      $horarioDia->getHoraFin(),
-      $servicio->getDuracionMinutos(),
-      $bloqueos,
-      $citas
-    );
+    $todosSlots = [];
+    foreach ($horariosDia as $turno) {
+      $slotsTurno = $this->generarSlotsDisponibles(
+        $fecha,
+        $turno->getHoraInicio(),
+        $turno->getHoraFin(),
+        $servicio->getDuracionMinutos(),
+        $bloqueos,
+        $citas
+      );
+      $todosSlots = array_merge($todosSlots, $slotsTurno);
+    }
+    return $todosSlots;
   }
 
   /**

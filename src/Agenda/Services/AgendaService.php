@@ -383,8 +383,8 @@ class AgendaService
 
     // Validar día laboral y bloqueos
     $diaSemana = (int) $inicioObj->format('w');
-    $horarioDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
-    if (!$horarioDia || !$horarioDia->isActivo()) {
+    $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
+    if (empty($horariosDia)) {
       throw new Exception("El centro no labora en el día de la semana seleccionado ({$fechaCita}).");
     }
 
@@ -677,8 +677,8 @@ class AgendaService
     // 1. Validar que el centro labore en ese día de la semana
     $fechaObj = new DateTime($nuevaFecha);
     $diaSemana = (int) $fechaObj->format('w');
-    $horarioDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
-    if (!$horarioDia || !$horarioDia->isActivo()) {
+    $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
+    if (empty($horariosDia)) {
       throw new Exception("El centro no labora en el día de la semana seleccionado ({$nuevaFecha}).");
     }
 
