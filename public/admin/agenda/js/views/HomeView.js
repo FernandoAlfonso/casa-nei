@@ -9,14 +9,14 @@ export default class HomeView {
             <h1 style="font-size: 1.8rem;">Solicitudes</h1>
             <p style="color: var(--text-muted); font-size: 0.9rem;">Gestiona las citas pendientes</p>
           </div>
-          <button class="btn" onclick="window.location.hash='#new-cita'" style="width: auto; padding: 10px 16px; font-size: 0.9rem; gap: 6px;">
+          <button class="btn btn-add" onclick="window.location.hash='#new-cita'" style="width: auto; padding: 10px 16px; font-size: 0.9rem; gap: 6px;">
             <span>➕</span> Nueva
           </button>
         </header>
 
         <div class="card" style="padding: 0; overflow: hidden;">
-          <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: rgba(0,0,0,0.2);">
-            <h3 style="font-size: 1rem; color: #fff;">Pendientes de Confirmación</h3>
+          <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-light); background: var(--bg-card-subtle);">
+            <h3 style="font-size: 1rem; color: var(--text-main);">Pendientes de Confirmación</h3>
           </div>
           
           <div id="solicitudes-container" style="padding: 16px;">
@@ -63,11 +63,11 @@ export default class HomeView {
     let html = '<div style="display: flex; flex-direction: column; gap: 16px;">';
     solicitudes.forEach(cita => {
       html += `
-        <div style="border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; background: rgba(255,255,255,0.03);">
+        <div style="border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; background: var(--bg-card-subtle);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
             <div>
-              <h4 style="font-size: 1.1rem; color: #fff; margin-bottom: 4px;">${cita.cliente_nombre}</h4>
-              <p style="font-size: 0.85rem; color: var(--primary);">${cita.servicio_nombre}</p>
+              <h4 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px;">${cita.cliente_nombre}</h4>
+              <p style="font-size: 0.85rem; color: var(--primary); font-weight: 600;">${cita.servicio_nombre}</p>
             </div>
             <div style="text-align: right; font-size: 0.85rem; color: var(--text-muted);">
               <div>📅 ${cita.fecha_cita}</div>
@@ -82,7 +82,7 @@ export default class HomeView {
 
           <div style="display: flex; gap: 10px;">
             <button class="btn btn-accept" data-id="${cita.cita_id}" style="flex: 1; padding: 10px; font-size: 0.9rem;">✅ Aceptar</button>
-            <button class="btn btn-secondary btn-reject" data-id="${cita.cita_id}" style="flex: 1; padding: 10px; font-size: 0.9rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">❌ Rechazar</button>
+            <button class="btn btn-reject" data-id="${cita.cita_id}" style="flex: 1; padding: 10px; font-size: 0.9rem;">❌ Rechazar</button>
           </div>
         </div>
       `;

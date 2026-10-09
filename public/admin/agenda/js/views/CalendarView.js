@@ -38,13 +38,13 @@ export default class CalendarView {
 
           <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--text-muted);">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(16, 185, 129, 0.2); border: 1px solid var(--primary);"></div> Verde: Nada o poco agendado
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: #dcfce7; border: 1px solid var(--primary);"></div> Verde: Nada o poco agendado
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger);"></div> Rojo: Todo Agendado
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: #fee2e2; border: 1px solid var(--danger);"></div> Rojo: Todo Agendado
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(255,255,255,0.05);"></div> Gris: No laboral / Bloqueado
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: #e2e8df; border: 1px solid #ccd5c8;"></div> Gris: No laboral / Bloqueado
             </div>
           </div>
         </div>
@@ -114,17 +114,17 @@ export default class CalendarView {
 
     daysData.forEach(dia => {
       const dayNum = parseInt(dia.fecha.split('-')[2], 10);
-      let bgStyle = 'background: rgba(255,255,255,0.05); color: #666; border: 1px solid transparent;';
+      let bgStyle = 'background: #e2e8df; color: #69786c; border: 1px solid #ccd5c8;';
       let cursor = 'default';
       
       // 'no laboral', 'nada agendado', 'poco agendado', 'todo agendado'
       if (dia.nivel_ocupacion === 'no laboral') {
-        bgStyle = 'background: rgba(255,255,255,0.05); color: #666;';
+        bgStyle = 'background: #e2e8df; color: #69786c; border: 1px solid #ccd5c8;';
       } else if (dia.nivel_ocupacion === 'todo agendado') {
-        bgStyle = 'background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fff; cursor: pointer;';
+        bgStyle = 'background: #fee2e2; border: 1px solid var(--danger); color: #991b1b; font-weight: 600; cursor: pointer;';
         cursor = 'pointer';
       } else if (dia.nivel_ocupacion === 'poco agendado' || dia.nivel_ocupacion === 'nada agendado') {
-        bgStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid var(--primary); color: #fff; cursor: pointer;';
+        bgStyle = 'background: #dcfce7; border: 1px solid var(--primary); color: #166534; font-weight: 600; cursor: pointer;';
         cursor = 'pointer';
       }
 
@@ -172,12 +172,12 @@ export default class CalendarView {
         if (cita.estado === 'cancelada') statusColor = 'var(--danger)';
 
         html += `
-          <div style="border-left: 3px solid ${statusColor}; padding-left: 12px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 0 8px 8px 0;">
+          <div style="border-left: 4px solid ${statusColor}; padding-left: 12px; background: var(--bg-card-subtle); padding: 12px; border-radius: 0 8px 8px 0;">
             <div style="display: flex; justify-content: space-between;">
-              <strong style="color: #fff;">${cita.hora_inicio.substring(0, 5)}</strong>
+              <strong style="color: var(--text-main);">${cita.hora_inicio.substring(0, 5)}</strong>
               <span style="font-size: 0.75rem; text-transform: uppercase; color: ${statusColor}; font-weight: bold;">${cita.estado}</span>
             </div>
-            <div style="margin-top: 4px; font-size: 0.9rem;">${cita.cliente_nombre}</div>
+            <div style="margin-top: 4px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;">${cita.cliente_nombre}</div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">${cita.servicio_nombre}</div>
           </div>
         `;

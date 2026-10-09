@@ -72,8 +72,8 @@ export default class HorariosView {
             </div>
             
             <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
-              <button class="btn btn-add-turno" style="flex: 1; padding: 8px 12px; font-size: 0.9rem; background-color: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; ${!isActivo ? 'display: none;' : ''}">+ Agregar horario</button>
-              <button class="btn btn-save" style="flex: 1; padding: 8px 12px; font-size: 0.9rem; background-color: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center;">Guardar horarios</button>
+              <button class="btn btn-add btn-add-turno" style="flex: 1; padding: 8px 12px; font-size: 0.9rem; text-align: center; ${!isActivo ? 'display: none;' : ''}">+ Agregar horario</button>
+              <button class="btn btn-save" style="flex: 1; padding: 8px 12px; font-size: 0.9rem; text-align: center;">Guardar horarios</button>
             </div>
           </div>
         `;
@@ -95,7 +95,7 @@ export default class HorariosView {
           <span>-</span>
           <input type="time" class="form-input input-fin" value="${fin}" style="flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px;">
         </div>
-        <button class="btn btn-remove-turno" style="padding: 6px 10px; flex-shrink: 0; font-size: 0.85rem; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Eliminar turno">Eliminar horario</button>
+        <button class="btn btn-delete btn-remove-turno" style="padding: 6px 12px; flex-shrink: 0; font-size: 0.85rem;" title="Eliminar turno">Eliminar horario</button>
       </div>
     `;
   }

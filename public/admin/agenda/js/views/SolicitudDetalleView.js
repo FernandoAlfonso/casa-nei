@@ -71,11 +71,11 @@ export default class SolicitudDetalleView {
 
   renderDetalle(cita) {
     const html = `
-      <div style="border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; background: rgba(255,255,255,0.03);">
+      <div style="border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; background: var(--bg-card-subtle);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
           <div>
-            <h4 style="font-size: 1.1rem; color: #fff; margin-bottom: 4px;">${cita.cliente_nombre}</h4>
-            <p style="font-size: 0.85rem; color: var(--primary);">${cita.servicio_nombre}</p>
+            <h4 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px;">${cita.cliente_nombre}</h4>
+            <p style="font-size: 0.85rem; color: var(--primary); font-weight: 600;">${cita.servicio_nombre}</p>
           </div>
           <div style="text-align: right; font-size: 0.85rem; color: var(--text-muted);">
             <div>📅 ${cita.fecha_cita}</div>
@@ -90,7 +90,7 @@ export default class SolicitudDetalleView {
 
         <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px;">
           <button class="btn btn-accept" data-id="${cita.cita_id}" style="width: 100%; padding: 12px; font-size: 1rem;">✅ Aceptar Solicitud</button>
-          <button class="btn btn-secondary btn-reject" data-id="${cita.cita_id}" style="width: 100%; padding: 12px; font-size: 1rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">❌ Rechazar Solicitud</button>
+          <button class="btn btn-reject" data-id="${cita.cita_id}" style="width: 100%; padding: 12px; font-size: 1rem;">❌ Rechazar Solicitud</button>
         </div>
       </div>
     `;

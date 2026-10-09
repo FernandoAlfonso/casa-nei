@@ -10,7 +10,7 @@ export default class ServicesView {
             <h1 style="font-size: 1.6rem;">Servicios</h1>
             <p style="color: var(--text-muted); font-size: 0.9rem;">Catálogo de Terapias</p>
           </div>
-          <button class="btn" id="btnNuevoServicio" style="width: auto; padding: 10px 16px;">
+          <button class="btn btn-add" id="btnNuevoServicio" style="width: auto; padding: 10px 16px;">
             ➕ Nuevo
           </button>
         </header>
@@ -85,10 +85,10 @@ export default class ServicesView {
     // Para simplificar, usamos prompts (en vez de un HTML modal completo)
     // Ya que esto es un admin rápido. Pero hagámoslo bien con un div overlay temporal
     const overlay = document.createElement('div');
-    overlay.style = 'position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;';
+    overlay.style = 'position: fixed; inset: 0; background: rgba(25, 36, 28, 0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;';
     
     overlay.innerHTML = `
-      <div class="card" style="width: 100%; max-width: 400px; padding: 24px;">
+      <div class="card" style="width: 100%; max-width: 400px; padding: 24px; box-shadow: var(--shadow-lg);">
         <h3 style="margin-bottom: 16px;">${title}</h3>
         <form id="servicioForm">
           <input type="hidden" id="srv_id" value="${id}">
@@ -120,7 +120,7 @@ export default class ServicesView {
           </div>
           <div style="display: flex; gap: 12px; margin-top: 24px;">
             <button type="button" id="btnCancelModal" class="btn btn-secondary" style="flex: 1;">Cancelar</button>
-            <button type="submit" class="btn" style="flex: 1;">Guardar</button>
+            <button type="submit" class="btn btn-save" style="flex: 1;">Guardar</button>
           </div>
         </form>
       </div>

@@ -1,33 +1,67 @@
 /* 
  * Casa Nei - Admin PWA Styles 
- * Premium Design System with Glassmorphism and CSS Variables 
+ * Minimalist Light Design System (Sin blanco puro)
  */
 
 :root {
-  --bg-main: #0a140d;
-  --bg-card: rgba(23, 43, 28, 0.65);
-  --bg-nav: rgba(10, 20, 13, 0.85);
-  --primary: #10b981;
-  --primary-dark: #059669;
-  --primary-glow: rgba(16, 185, 129, 0.25);
-  --accent: #fbbf24;
-  --danger: #ef4444;
-  --danger-glow: rgba(239, 68, 68, 0.15);
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --border: rgba(52, 211, 153, 0.18);
-  --border-light: rgba(255, 255, 255, 0.08);
-  
-  --radius-xl: 28px;
-  --radius-lg: 22px;
-  --radius-md: 14px;
-  --radius-sm: 10px;
+  /* Fondo general claro (sin blanco puro: tonos salvia/marfil muy sutiles) */
+  --bg-main: #f0f4ef;
+  --bg-card: #f8faf7;
+  --bg-card-subtle: #edf2eb;
+  --bg-nav: rgba(240, 244, 239, 0.94);
+  --bg-input: #edf2eb;
+  --bg-hover: #e5ebe2;
+
+  /* Tipografía y textos de alto contraste */
+  --text-main: #19241c;
+  --text-muted: #5e6d63;
+  --text-subtle: #829186;
+  --text-on-color: #f4f8f4; /* Texto claro para botones de color (no blanco puro) */
+
+  /* Bordes limpios y sutiles */
+  --border: #d4ded1;
+  --border-light: #e2eae0;
+
+  /* Identidad y estados */
+  --primary: #15803d;
+  --primary-dark: #166534;
+  --primary-glow: rgba(21, 128, 61, 0.15);
+  --accent: #d97706;
+  --danger: #dc2626;
+  --danger-glow: rgba(220, 38, 38, 0.12);
+
+  /* Reglas de botones solicitadas: */
+  /* Verde: Agregar y Aceptar */
+  --btn-green-bg: #15803d;
+  --btn-green-hover: #166534;
+  --btn-green-text: #f4f8f4;
+
+  /* Rojo: Eliminar y Rechazar */
+  --btn-red-bg: #dc2626;
+  --btn-red-hover: #b91c1c;
+  --btn-red-text: #fdf3f3;
+
+  /* Azul: Guardar datos */
+  --btn-blue-bg: #2563eb;
+  --btn-blue-hover: #1d4ed8;
+  --btn-blue-text: #f0f6ff;
+
+  /* Secundarios (Volver, Cancelar, etc.) */
+  --btn-sec-bg: #e5ebe2;
+  --btn-sec-hover: #dbe3d8;
+  --btn-sec-border: #ccd6c8;
+  --btn-sec-text: #19241c;
+
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
   --radius-round: 9999px;
-  
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 16px 40px -10px rgba(0, 0, 0, 0.6);
-  
+
+  --shadow-sm: 0 2px 8px rgba(25, 36, 28, 0.05);
+  --shadow-md: 0 4px 18px rgba(25, 36, 28, 0.08);
+  --shadow-lg: 0 10px 30px rgba(25, 36, 28, 0.12);
+
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -40,7 +74,7 @@
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at 50% 0%, #173820 0%, var(--bg-main) 70%);
+  background: var(--bg-main);
   background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
@@ -53,14 +87,14 @@ body {
 h1, h2, h3, h4 {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
+  color: var(--text-main);
 }
 
 h1 {
   font-size: 2rem;
-  background: linear-gradient(135deg, #ffffff 40%, #a7f3d0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
 }
 
 /* Layout Shell */
@@ -80,9 +114,9 @@ h1 {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(10, 20, 13, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(240, 244, 239, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -90,7 +124,7 @@ h1 {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: #fff;
+  color: var(--text-main);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -99,7 +133,7 @@ h1 {
 .top-bar .brand-icon {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(27, 56, 25, 0.6) 100%);
+  background: #dcfce7;
   border: 1px solid var(--primary);
   border-radius: 8px;
   display: flex;
@@ -134,6 +168,7 @@ main#app-root {
   align-items: center;
   z-index: 50;
   transition: transform 0.3s ease;
+  box-shadow: 0 -4px 16px rgba(25, 36, 28, 0.05);
 }
 
 /* Hidden by default until logged in */
@@ -166,12 +201,11 @@ main#app-root {
 
 .nav-item.active {
   color: var(--primary);
-  background: rgba(16, 185, 129, 0.1);
+  background: #dcfce7;
 }
 
 .nav-item.active .icon {
   transform: scale(1.15);
-  text-shadow: 0 0 12px var(--primary-glow);
 }
 
 .nav-item:active {
@@ -185,7 +219,7 @@ main#app-root {
   }
   
   .top-bar {
-    display: none; /* Can merge top bar logic into sidebar */
+    display: none;
   }
 
   .app-nav {
@@ -199,6 +233,7 @@ main#app-root {
     border-right: 1px solid var(--border-light);
     padding: 32px 20px;
     gap: 8px;
+    box-shadow: none;
     transform: none !important;
   }
   
@@ -229,48 +264,114 @@ main#app-root {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: 24px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
+  color: var(--text-main);
 }
 
 .card-title {
   font-size: 1.15rem;
-  color: #fff;
+  color: var(--text-main);
   margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+/* Buttons System */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   background: var(--primary);
-  color: #000;
-  font-weight: 700;
+  color: var(--text-on-color);
+  font-weight: 600;
   font-family: 'Plus Jakarta Sans', sans-serif;
   border: none;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px var(--primary-glow);
+  box-shadow: var(--shadow-sm);
   width: 100%;
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
+/* Verde: Agregar */
+.btn-add,
+.btn-create,
+.btn-new,
+.btn-add-turno {
+  background: var(--btn-green-bg) !important;
+  color: var(--btn-green-text) !important;
+  border: 1px solid transparent;
+}
+.btn-add:hover,
+.btn-create:hover,
+.btn-new:hover,
+.btn-add-turno:hover {
+  background: var(--btn-green-hover) !important;
+}
+
+/* Verde: Aceptar */
+.btn-accept {
+  background: var(--btn-green-bg) !important;
+  color: var(--btn-green-text) !important;
+  border: 1px solid transparent;
+}
+.btn-accept:hover {
+  background: var(--btn-green-hover) !important;
+}
+
+/* Rojo: Eliminar */
+.btn-delete,
+.btn-danger,
+.btn-del,
+.btn-remove-turno {
+  background: var(--btn-red-bg) !important;
+  color: var(--btn-red-text) !important;
+  border: 1px solid transparent;
+}
+.btn-delete:hover,
+.btn-danger:hover,
+.btn-del:hover,
+.btn-remove-turno:hover {
+  background: var(--btn-red-hover) !important;
+}
+
+/* Rojo: Rechazar */
+.btn-reject {
+  background: var(--btn-red-bg) !important;
+  color: var(--btn-red-text) !important;
+  border: 1px solid transparent;
+}
+.btn-reject:hover {
+  background: var(--btn-red-hover) !important;
+}
+
+/* Azul: Guardar datos */
+.btn-save {
+  background: var(--btn-blue-bg) !important;
+  color: var(--btn-blue-text) !important;
+  border: 1px solid transparent;
+}
+.btn-save:hover {
+  background: var(--btn-blue-hover) !important;
+}
+
+/* Secundarios (Volver, Cancelar, etc.) */
 .btn-secondary {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--btn-sec-bg) !important;
+  color: var(--btn-sec-text) !important;
   box-shadow: none;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--btn-sec-border) !important;
+}
+.btn-secondary:hover {
+  background: var(--btn-sec-hover) !important;
 }
 
 /* Forms */
@@ -288,20 +389,25 @@ main#app-root {
 
 .form-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-light);
-  color: #fff;
-  padding: 14px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 12px 14px;
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 1rem;
-  transition: border-color 0.2s;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-glow);
+  background: var(--bg-card);
+}
+
+.form-input::placeholder {
+  color: var(--text-subtle);
 }
 
 /* Loaders */
@@ -314,9 +420,9 @@ main#app-root {
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(16, 185, 129, 0.2);
+  width: 36px;
+  height: 36px;
+  border: 3px solid #d4ded1;
   border-radius: 50%;
   border-top-color: var(--primary);
   animation: spin 1s ease-in-out infinite;
@@ -332,6 +438,6 @@ main#app-root {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }

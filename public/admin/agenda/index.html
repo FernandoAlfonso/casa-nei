@@ -7,10 +7,10 @@
 
   <!-- Metadatos e Iconos PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1b3819">
+  <meta name="theme-color" content="#f0f4ef">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Agenda Admin">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 
@@ -38,8 +38,8 @@
     <!-- Barra de Navegación Lateral (Escritorio) o Inferior (Móvil) -->
     <nav class="app-nav hidden" id="mainNav">
       <!-- Agregamos clase de marca solo para desktop -->
-      <div class="brand desktop-only" style="display:none; color:white; font-family:'Outfit'; font-size:1.4rem; padding: 10px; margin-bottom:20px; font-weight:bold;">
-        <span style="color:#10b981;">Casa</span> Nei
+      <div class="brand desktop-only" style="display:none; color:var(--text-main); font-family:'Outfit'; font-size:1.4rem; padding: 10px; margin-bottom:20px; font-weight:bold;">
+        <span style="color:var(--primary);">Casa</span> Nei
       </div>
       
       <a href="#home" class="nav-item active" data-view="home">

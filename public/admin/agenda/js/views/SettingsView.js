@@ -45,7 +45,7 @@ export default class SettingsView {
           </div>
         </div>
 
-        <button id="btnLogout" class="btn btn-secondary" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+        <button id="btnLogout" class="btn btn-delete">
           Cerrar Sesión
         </button>
       </div>

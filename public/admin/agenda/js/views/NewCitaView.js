@@ -57,7 +57,7 @@ export default class NewCitaView {
               <label for="nc_confirmar" style="font-size: 0.9rem;">Confirmar cita inmediatamente</label>
             </div>
 
-            <button type="submit" id="btnSubmitNC" class="btn">Agendar Cita</button>
+            <button type="submit" id="btnSubmitNC" class="btn btn-add">Agendar Cita</button>
           </form>
         </div>
       </div>

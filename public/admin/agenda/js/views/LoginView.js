@@ -5,7 +5,7 @@ export default class LoginView {
   render() {
     return `
       <div class="fade-in" style="max-width: 400px; margin: 0 auto; margin-top: 10vh; text-align: center;">
-        <div class="icon-wrapper" style="width: 80px; height: 80px; margin: 0 auto 24px; font-size: 2.2rem; border-radius: 50%; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(27, 56, 25, 0.6)); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;">
+        <div class="icon-wrapper" style="width: 80px; height: 80px; margin: 0 auto 24px; font-size: 2.2rem; border-radius: 50%; background: #dcfce7; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;">
           🔐
         </div>
         <h1 style="margin-bottom: 8px;">Acceso Admin</h1>
