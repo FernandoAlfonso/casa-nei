@@ -41,11 +41,13 @@ export default class HorariosView {
                 <span style="font-size: 0.85rem;">Laboral</span>
               </div>
             </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <input type="time" class="form-input input-inicio" data-id="${h.id}" value="${h.hora_inicio.substring(0, 5)}" ${!isActivo ? 'disabled' : ''}>
-              <span>-</span>
-              <input type="time" class="form-input input-fin" data-id="${h.id}" value="${h.hora_fin.substring(0, 5)}" ${!isActivo ? 'disabled' : ''}>
-              <button class="btn btn-secondary btn-save" data-id="${h.id}" style="padding: 8px;">💾</button>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 200px;">
+                <input type="time" class="form-input input-inicio" data-id="${h.id}" value="${h.hora_inicio.substring(0, 5)}" ${!isActivo ? 'disabled' : ''} style="flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px;">
+                <span>-</span>
+                <input type="time" class="form-input input-fin" data-id="${h.id}" value="${h.hora_fin.substring(0, 5)}" ${!isActivo ? 'disabled' : ''} style="flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px;">
+              </div>
+              <button class="btn btn-secondary btn-save" data-id="${h.id}" style="padding: 8px 16px; flex-shrink: 0; font-size: 0.9rem;">Guardar</button>
             </div>
           </div>
         `;
