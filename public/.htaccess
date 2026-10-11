@@ -9,3 +9,25 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^descarga/([a-zA-Z0-9-]+)/?$ descarga.html?doc=$1 [L,QSA]
 </IfModule>
+
+# ----------------------------------------------------------------------
+# Control de Caché y Revalidación para Dispositivos Móviles y PWA
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+    # 1. Archivos HTML: Siempre revalidar para que el usuario reciba los últimos enlaces
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
+
+    # 2. Archivos CSS y JavaScript: Revalidación condicional (ETag / 304 Not Modified)
+    # Protege tanto a los entry points como a los submódulos ES Modules importados
+    <FilesMatch "\.(css|js|mjs)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# Habilitar ETag basado en tiempo de modificación y tamaño de archivo
+FileETag MTime Size
+

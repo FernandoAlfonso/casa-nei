@@ -1,5 +1,11 @@
 {
   "name": "casa-nei-frontend",
   "type": "module",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "node tests/run.js",
+    "version:assets": "php ../../scripts/version_assets.php",
+    "version:check": "php ../../scripts/version_assets.php --check"
+  }
 }
+

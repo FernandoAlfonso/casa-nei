@@ -1,0 +1,20 @@
+#!/bin/sh
+# ==============================================================================
+# Casa Nei - Git Pre-commit Hook
+# Sincroniza automáticamente versiones de assets (CSS y JS) en archivos HTML
+# antes de confirmar cualquier commit.
+# ==============================================================================
+
+if command -v php >/dev/null 2>&1; then
+    echo "⚡ [pre-commit] Verificando y sincronizando versiones de assets..."
+    php scripts/version_assets.php
+
+    # Si se modificó algún archivo HTML rastreado en public/, incluirlo en el commit
+    git diff --name-only -- 'public/*.html' 'public/**/*.html' 2>/dev/null | while IFS= read -r file; do
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+    done
+fi
+
+exit 0
