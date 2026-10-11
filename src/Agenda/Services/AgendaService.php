@@ -11,6 +11,7 @@ use App\Agenda\Repositories\ClienteRepository;
 use App\Agenda\Repositories\HorarioRepository;
 use App\Agenda\Repositories\ServicioRepository;
 use App\Shared\Db\DataBase;
+use App\Shared\Security\Encryption;
 use DateTime;
 use Exception;
 use Throwable;
@@ -381,12 +382,8 @@ class AgendaService
     $horaInicioNorm = $inicioObj->format('H:i:s');
     $horaFinNorm = $finObj->format('H:i:s');
 
-    // Validar día laboral y bloqueos
+    // Validar bloqueos de día completo (los administradores pueden agendar en domingo con costo extra)
     $diaSemana = (int) $inicioObj->format('w');
-    $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
-    if (empty($horariosDia)) {
-      throw new Exception("El centro no labora en el día de la semana seleccionado ({$fechaCita}).");
-    }
 
     $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaCita, $fechaCita);
     foreach ($bloqueos as $bloqueo) {
@@ -674,11 +671,11 @@ class AgendaService
       throw new Exception("El servicio seleccionado no es válido.");
     }
 
-    // 1. Validar que el centro labore en ese día de la semana
+    // 1. Validar que el centro labore en ese día de la semana (se permite domingo para el admin)
     $fechaObj = new DateTime($nuevaFecha);
     $diaSemana = (int) $fechaObj->format('w');
     $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
-    if (empty($horariosDia)) {
+    if (empty($horariosDia) && $diaSemana !== 0) {
       throw new Exception("El centro no labora en el día de la semana seleccionado ({$nuevaFecha}).");
     }
 

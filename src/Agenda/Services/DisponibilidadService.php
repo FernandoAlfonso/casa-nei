@@ -224,31 +224,140 @@ class DisponibilidadService
     $finMes = clone $inicioMes;
     $finMes->modify('last day of this month');
 
-    $diasTotales = (int) $finMes->format('d');
-    $semanas = ceil($diasTotales / 7) + 1; // Un poco extra para asegurar cubrir el mes completo si cae cruzado
+    $fechaInicioStr = $inicioMes->format('Y-m-d');
+    $fechaFinStr = $finMes->format('Y-m-d');
 
-    $calendarioCompleto = $this->obtenerCalendario($inicioMes->format('Y-m-d'), (int) $semanas, null, false, false);
-    
-    $mesData = [];
-    foreach ($calendarioCompleto as $fecha => $diaData) {
-      if (str_starts_with($fecha, $mes)) {
-        // Enriquecer con el indicador visual solicitado: todo agendado (ocupado), poco agendado, nada agendado
-        $estadoAgendamiento = 'nada agendado';
-        
-        if ($diaData['estado'] === 'cerrado' || $diaData['estado'] === 'bloqueado') {
-          $estadoAgendamiento = 'no laboral';
-        } elseif ($diaData['estado'] === 'ocupado' || $diaData['slots_libres'] === 0) {
-          $estadoAgendamiento = 'todo agendado';
-        } elseif ($diaData['slots_libres'] <= 3) { // arbitrario, <= 3 slots libres es "poco agendado" / casi lleno
-          $estadoAgendamiento = 'poco agendado';
-        }
-
-        $diaData['nivel_ocupacion'] = $estadoAgendamiento;
-        $mesData[$fecha] = $diaData;
-      }
+    // 1. Cargar turnos semanales
+    $horariosSemanales = [];
+    foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
+      $horariosSemanales[$h->getDiaSemana()][] = $h;
     }
 
-    return array_values($mesData);
+    // 2. Cargar bloqueos en el mes
+    $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
+    $bloqueosPorFecha = [];
+    foreach ($bloqueos as $b) {
+      $bloqueosPorFecha[$b->getFecha()][] = $b;
+    }
+
+    // 3. Cargar citas en el mes (pendientes y confirmadas)
+    $citas = $this->citaRepo->obtenerPorRangoFechas($fechaInicioStr, $fechaFinStr, [
+      EstadoCita::PENDIENTE->value,
+      EstadoCita::CONFIRMADA->value
+    ]);
+    $citasPorFecha = [];
+    foreach ($citas as $c) {
+      $citasPorFecha[$c->getFechaCita()][] = $c;
+    }
+
+    $periodo = new DatePeriod($inicioMes, new DateInterval('P1D'), (clone $finMes)->modify('+1 day'));
+    $mesData = [];
+
+    foreach ($periodo as $fechaObj) {
+      $fechaStr = $fechaObj->format('Y-m-d');
+      $diaSemana = (int) $fechaObj->format('w'); // 0=Domingo, 1=Lunes, ...
+      $citasDia = $citasPorFecha[$fechaStr] ?? [];
+      $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
+      $totalCitas = count($citasDia);
+
+      $tienePendientes = false;
+      foreach ($citasDia as $c) {
+        if ($c->estaPendiente()) {
+          $tienePendientes = true;
+          break;
+        }
+      }
+
+      // Validar si hay bloqueo de día completo
+      $bloqueoCompleto = null;
+      foreach ($bloqueosDia as $b) {
+        if ($b->esDiaCompleto()) {
+          $bloqueoCompleto = $b;
+          break;
+        }
+      }
+
+      if ($bloqueoCompleto !== null) {
+        $mesData[] = [
+          'fecha' => $fechaStr,
+          'dia_semana' => $diaSemana,
+          'estado' => 'bloqueado',
+          'motivo' => $bloqueoCompleto->getMotivo() ?? 'Bloqueado',
+          'slots_libres' => 0,
+          'total_citas' => $totalCitas,
+          'capacidad_total' => 0,
+          'tiene_pendientes' => $tienePendientes,
+          'nivel_ocupacion' => 'bloqueado'
+        ];
+        continue;
+      }
+
+      // Validar si el centro abre regularmente ese día de la semana
+      $esDiaLaboral = isset($horariosSemanales[$diaSemana]);
+
+      if (!$esDiaLaboral) {
+        // Domingo u otro día sin turnos regulares
+        if ($totalCitas > 0) {
+          // Día no laboral pero con citas especiales agendadas por el admin
+          $mesData[] = [
+            'fecha' => $fechaStr,
+            'dia_semana' => $diaSemana,
+            'estado' => 'disponible',
+            'motivo' => 'Citas especiales agendadas',
+            'slots_libres' => 0,
+            'total_citas' => $totalCitas,
+            'capacidad_total' => $totalCitas,
+            'tiene_pendientes' => $tienePendientes,
+            'nivel_ocupacion' => 'parcial' // Al menos una cita agendada
+          ];
+        } else {
+          // No laboral sin citas
+          $mesData[] = [
+            'fecha' => $fechaStr,
+            'dia_semana' => $diaSemana,
+            'estado' => 'cerrado',
+            'motivo' => 'Día no laboral',
+            'slots_libres' => 0,
+            'total_citas' => 0,
+            'capacidad_total' => 0,
+            'tiene_pendientes' => false,
+            'nivel_ocupacion' => 'no laboral'
+          ];
+        }
+        continue;
+      }
+
+      // Día laboral regular: calcular capacidad y slots libres reales
+      $horariosDia = $horariosSemanales[$diaSemana];
+      $calculo = $this->calcularSlotsDiaAdmin($fechaStr, $horariosDia, $bloqueosDia, $citasDia, 60);
+      $capacidad = $calculo['capacidad'];
+      $slotsLibres = $calculo['slots_libres'];
+
+      if ($totalCitas === 0) {
+        $nivelOcupacion = 'nada agendado'; // Amarillo
+        $estado = 'disponible';
+      } elseif ($slotsLibres === 0 || $totalCitas >= $capacidad) {
+        $nivelOcupacion = 'todo agendado'; // Verde
+        $estado = 'ocupado';
+      } else {
+        $nivelOcupacion = 'parcial'; // Azul (al menos un horario agendado)
+        $estado = 'disponible';
+      }
+
+      $mesData[] = [
+        'fecha' => $fechaStr,
+        'dia_semana' => $diaSemana,
+        'estado' => $estado,
+        'motivo' => $slotsLibres === 0 ? 'Sin horarios disponibles' : null,
+        'slots_libres' => $slotsLibres,
+        'total_citas' => $totalCitas,
+        'capacidad_total' => $capacidad,
+        'tiene_pendientes' => $tienePendientes,
+        'nivel_ocupacion' => $nivelOcupacion
+      ];
+    }
+
+    return $mesData;
   }
 
   /**
@@ -535,6 +644,80 @@ class DisponibilidadService
     }
 
     return $slots;
+  }
+
+  /**
+   * Calcula los slots totales y libres de un día sin descartar horas pasadas,
+   * ideal para evaluar la ocupación real e histórica en el panel administrativo.
+   *
+   * @param string $fecha Formato YYYY-MM-DD
+   * @param array $horariosDia Lista de HorarioAtencion para el día
+   * @param array $bloqueosDia Lista de BloqueoAgenda para el día
+   * @param array $citasDia Lista de Cita para el día
+   * @param int $duracionMinutos Duración base para los slots
+   * @return array{capacidad: int, slots_libres: int}
+   */
+  private function calcularSlotsDiaAdmin(
+    string $fecha,
+    array $horariosDia,
+    array $bloqueosDia,
+    array $citasDia,
+    int $duracionMinutos = 60
+  ): array {
+    $totalSlots = 0;
+    $slotsLibres = 0;
+
+    foreach ($horariosDia as $turno) {
+      $actual = new DateTime("{$fecha} {$turno->getHoraInicio()}");
+      $cierre = new DateTime("{$fecha} {$turno->getHoraFin()}");
+
+      while ($actual < $cierre) {
+        $finSlot = (clone $actual)->modify("+{$duracionMinutos} minutes");
+        if ($finSlot > $cierre) {
+          break;
+        }
+
+        $totalSlots++;
+        $horaInicioStr = $actual->format('H:i:s');
+        $horaFinStr = $finSlot->format('H:i:s');
+
+        // Validar colisión con bloqueos parciales
+        $colisionBloqueo = false;
+        foreach ($bloqueosDia as $bloqueo) {
+          if ($bloqueo->getHoraInicio() && $bloqueo->getHoraFin()) {
+            if ($this->hayTraslape($horaInicioStr, $horaFinStr, $bloqueo->getHoraInicio(), $bloqueo->getHoraFin())) {
+              $colisionBloqueo = true;
+              break;
+            }
+          }
+        }
+
+        if ($colisionBloqueo) {
+          $actual->modify("+{$duracionMinutos} minutes");
+          continue;
+        }
+
+        // Validar colisión con citas agendadas
+        $colisionCita = false;
+        foreach ($citasDia as $cita) {
+          if ($this->hayTraslape($horaInicioStr, $horaFinStr, $cita->getHoraInicio(), $cita->getHoraFin())) {
+            $colisionCita = true;
+            break;
+          }
+        }
+
+        if (!$colisionCita) {
+          $slotsLibres++;
+        }
+
+        $actual->modify("+{$duracionMinutos} minutes");
+      }
+    }
+
+    return [
+      'capacidad' => $totalSlots,
+      'slots_libres' => $slotsLibres
+    ];
   }
 
   /**

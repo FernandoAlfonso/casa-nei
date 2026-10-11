@@ -64,11 +64,16 @@ export default class NewCitaView {
     `;
   }
 
-  async mount() {
+  async mount(params = {}) {
     this.form = document.getElementById('newCitaForm');
     this.errorDiv = document.getElementById('formError');
     this.btnSubmit = document.getElementById('btnSubmitNC');
     this.selectServicio = document.getElementById('nc_servicio');
+
+    if (params && params.fecha) {
+      const inputFecha = document.getElementById('nc_fecha');
+      if (inputFecha) inputFecha.value = params.fecha;
+    }
 
     await this.loadServicios();
 

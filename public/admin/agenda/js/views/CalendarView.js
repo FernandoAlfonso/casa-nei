@@ -1,77 +1,130 @@
+/**
+ * Casa Nei - Vista de Calendario Mensual para Panel Administrativo
+ * @module views/CalendarView
+ */
+
 import ApiService from '../services/api.js';
 
+/**
+ * Clase que gestiona la vista del calendario mensual administrativo.
+ * Incluye cuadrícula inteligente (6 o 7 columnas), adaptación para daltonismo
+ * y gestión de estado visual para día actual y selección activa.
+ */
 export default class CalendarView {
   constructor() {
     this.currentDate = new Date();
-    // Default to current month
+    // Mes actual en formato YYYY-MM
     this.currentMonth = `${this.currentDate.getFullYear()}-${String(this.currentDate.getMonth() + 1).padStart(2, '0')}`;
+    // Fecha de hoy en formato YYYY-MM-DD
+    this.todayStr = `${this.currentDate.getFullYear()}-${String(this.currentDate.getMonth() + 1).padStart(2, '0')}-${String(this.currentDate.getDate()).padStart(2, '0')}`;
+    // Día seleccionado actualmente
+    this.selectedDate = this.todayStr;
   }
 
+  /**
+   * Renderiza el markup HTML estructural de la vista del calendario.
+   * @returns {string} Markup HTML
+   */
   render() {
     return `
       <div class="fade-in">
         <header style="margin-bottom: 24px;">
           <h1 style="font-size: 1.8rem;">Calendario</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Disponibilidad mensual</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Disponibilidad y citas mensuales</p>
         </header>
 
-        <div class="card">
+        <div class="card" style="padding: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <button id="btnPrevMonth" class="btn btn-secondary" style="width: auto; padding: 8px 12px;">&larr;</button>
-            <h2 id="monthTitle" style="font-size: 1.2rem; text-transform: capitalize;">Mes Año</h2>
-            <button id="btnNextMonth" class="btn btn-secondary" style="width: auto; padding: 8px 12px;">&rarr;</button>
+            <button id="btnPrevMonth" class="btn btn-secondary" style="width: auto; padding: 8px 14px;" aria-label="Mes anterior">&larr;</button>
+            <h2 id="monthTitle" style="font-size: 1.25rem; text-transform: capitalize; margin: 0;">Mes Año</h2>
+            <button id="btnNextMonth" class="btn btn-secondary" style="width: auto; padding: 8px 14px;" aria-label="Mes siguiente">&rarr;</button>
           </div>
           
-          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; margin-bottom: 8px;">
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Do</div>
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Lu</div>
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Ma</div>
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Mi</div>
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Ju</div>
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Vi</div>
-            <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: bold;">Sa</div>
+          <!-- Encabezado de columnas de la cuadrícula -->
+          <div id="calendarHeader" class="cal-grid-header cols-6">
+            <div class="col-name">Lu</div>
+            <div class="col-name">Ma</div>
+            <div class="col-name">Mi</div>
+            <div class="col-name">Ju</div>
+            <div class="col-name">Vi</div>
+            <div class="col-name">Sá</div>
           </div>
           
-          <div id="calendarGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;">
-            <div style="grid-column: 1 / -1; padding: 20px;">Cargando calendario...</div>
+          <!-- Cuadrícula interactiva de días -->
+          <div id="calendarGrid" class="cal-grid cols-6">
+            <div style="grid-column: 1 / -1; padding: 24px; text-align: center;">Cargando calendario...</div>
           </div>
 
-          <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--text-muted);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 12px; height: 12px; border-radius: 3px; background: #dcfce7; border: 1px solid var(--primary);"></div> Verde: Nada o poco agendado
+          <!-- Leyenda accesible de colores y estados -->
+          <div class="cal-legend">
+            <div class="cal-legend-item">
+              <div class="cal-legend-badge" style="background: #fef9c3; border: 1.5px solid #facc15;"></div>
+              <span>Amarillo: Nada agendado</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 12px; height: 12px; border-radius: 3px; background: #fee2e2; border: 1px solid var(--danger);"></div> Rojo: Todo Agendado
+            <div class="cal-legend-item">
+              <div class="cal-legend-badge" style="background: #dbeafe; border: 1.5px solid #60a5fa;"></div>
+              <span>Azul: Parcialmente agendado</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 12px; height: 12px; border-radius: 3px; background: #e2e8df; border: 1px solid #ccd5c8;"></div> Gris: No laboral / Bloqueado
+            <div class="cal-legend-item">
+              <div class="cal-legend-badge" style="background: #dcfce7; border: 1.5px solid #4ade80;"></div>
+              <span>Verde: Todo agendado</span>
+            </div>
+            <div class="cal-legend-item">
+              <div class="cal-legend-badge" style="background: #f1f4f0; border: 1.5px solid #d1dcd0;"></div>
+              <span>Gris: Bloqueado / Descanso</span>
+            </div>
+            <div class="cal-legend-item">
+              <div class="cal-legend-badge circle" style="background: #e2eae0; border: 2px solid var(--text-main);"></div>
+              <span>Círculo: Día de hoy</span>
             </div>
           </div>
         </div>
 
-        <div id="dayDetailsContainer" style="display: none; margin-top: 20px;">
-          <h3 id="dayDetailsTitle" style="font-size: 1.2rem; margin-bottom: 12px;">Citas del día</h3>
+        <!-- Contenedor del Detalle de Citas del Día Seleccionado -->
+        <div id="dayDetailsContainer" style="display: none; margin-top: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h3 id="dayDetailsTitle" style="font-size: 1.25rem; margin: 0;">Citas del día</h3>
+            <a id="btnAgendarDia" href="#new-cita" class="btn btn-add" style="width: auto; padding: 8px 14px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+              <span>+ Agendar Cita</span>
+            </a>
+          </div>
           <div id="dayDetailsList" class="card" style="padding: 16px;"></div>
         </div>
       </div>
     `;
   }
 
-  async mount() {
+  /**
+   * Enlaza eventos y carga los datos iniciales al montar la vista.
+   * @param {Object} [queryParams={}] Parámetros de la URL
+   */
+  async mount(queryParams = {}) {
     this.btnPrev = document.getElementById('btnPrevMonth');
     this.btnNext = document.getElementById('btnNextMonth');
     this.monthTitle = document.getElementById('monthTitle');
+    this.header = document.getElementById('calendarHeader');
     this.grid = document.getElementById('calendarGrid');
     this.detailsContainer = document.getElementById('dayDetailsContainer');
     this.detailsList = document.getElementById('dayDetailsList');
     this.detailsTitle = document.getElementById('dayDetailsTitle');
+    this.btnAgendarDia = document.getElementById('btnAgendarDia');
 
     this.btnPrev.addEventListener('click', () => this.changeMonth(-1));
     this.btnNext.addEventListener('click', () => this.changeMonth(1));
 
+    // Si viene una fecha específica en la URL (ej. ?fecha=YYYY-MM-DD), usarla
+    if (queryParams.fecha && /^\d{4}-\d{2}-\d{2}$/.test(queryParams.fecha)) {
+      this.selectedDate = queryParams.fecha;
+      this.currentMonth = queryParams.fecha.substring(0, 7);
+    }
+
     await this.loadMonth(this.currentMonth);
   }
 
+  /**
+   * Cambia el mes actual hacia atrás o adelante.
+   * @param {number} offset Desplazamiento (-1 o 1)
+   */
   changeMonth(offset) {
     const [year, month] = this.currentMonth.split('-').map(Number);
     const date = new Date(year, month - 1 + offset, 1);
@@ -79,88 +132,211 @@ export default class CalendarView {
     this.loadMonth(this.currentMonth);
   }
 
+  /**
+   * Carga los datos de disponibilidad mensual desde la API.
+   * @param {string} mesStr Mes en formato YYYY-MM
+   */
   async loadMonth(mesStr) {
     const [year, month] = mesStr.split('-').map(Number);
     const dateObj = new Date(year, month - 1, 1);
     
-    // Formatear mes en español
+    // Formatear mes en español (ej. "Octubre 2026")
     const formatter = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' });
     this.monthTitle.textContent = formatter.format(dateObj);
 
-    this.grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 20px;"><div class="spinner" style="margin: 0 auto;"></div></div>';
+    this.grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 28px;"><div class="spinner" style="margin: 0 auto;"></div></div>';
     this.detailsContainer.style.display = 'none';
 
     try {
       const response = await ApiService.get(`/admin/calendario-mensual?mes=${mesStr}`);
       const data = response.data || [];
       this.renderGrid(data, year, month);
+
+      // Si el día seleccionado está en el mes actual, abrir automáticamente sus detalles
+      if (this.selectedDate && this.selectedDate.startsWith(mesStr)) {
+        this.loadDayDetails(this.selectedDate);
+      }
     } catch (error) {
-      this.grid.innerHTML = `<div style="grid-column: 1 / -1; padding: 20px; color: var(--danger);">Error: ${error.message}</div>`;
+      this.grid.innerHTML = `<div style="grid-column: 1 / -1; padding: 24px; color: var(--danger);">Error al cargar calendario: ${error.message}</div>`;
     }
   }
 
+  /**
+   * Renderiza la cuadrícula de días con adaptación dinámica de columnas.
+   * Si ningún domingo tiene citas, omite domingos (6 columnas Lu-Sá).
+   * Si al menos un domingo tiene citas agendadas, incluye domingos (7 columnas Lu-Do).
+   *
+   * @param {Array<Object>} daysData Datos de días del mes
+   * @param {number} year Año
+   * @param {number} month Mes (1-12)
+   */
   renderGrid(daysData, year, month) {
-    // daysData es un array consecutivo de días para este mes.
-    // Necesitamos saber qué día de la semana es el día 1 para rellenar los espacios vacíos
-    const firstDay = new Date(year, month - 1, 1);
-    const firstDayOfWeek = firstDay.getDay(); // 0 = Domingo, 1 = Lunes...
+    // 1. Detectar si algún domingo del mes tiene citas registradas
+    const hayDomingosConCitas = daysData.some(dia => dia.dia_semana === 0 && (dia.total_citas > 0 || dia.nivel_ocupacion === 'parcial' || dia.nivel_ocupacion === 'todo agendado'));
+
+    // Configurar encabezado y rejilla: 6 columnas (Lu-Sá) o 7 columnas (Lu-Do)
+    if (hayDomingosConCitas) {
+      this.header.className = 'cal-grid-header cols-7';
+      this.grid.className = 'cal-grid cols-7';
+      this.header.innerHTML = `
+        <div class="col-name">Lu</div>
+        <div class="col-name">Ma</div>
+        <div class="col-name">Mi</div>
+        <div class="col-name">Ju</div>
+        <div class="col-name">Vi</div>
+        <div class="col-name">Sá</div>
+        <div class="col-name">Do</div>
+      `;
+    } else {
+      this.header.className = 'cal-grid-header cols-6';
+      this.grid.className = 'cal-grid cols-6';
+      this.header.innerHTML = `
+        <div class="col-name">Lu</div>
+        <div class="col-name">Ma</div>
+        <div class="col-name">Mi</div>
+        <div class="col-name">Ju</div>
+        <div class="col-name">Vi</div>
+        <div class="col-name">Sá</div>
+      `;
+    }
+
+    // Filtrar días a mostrar: si no hay domingos con citas, omitir los domingos
+    const diasVisibles = hayDomingosConCitas
+      ? daysData
+      : daysData.filter(dia => dia.dia_semana !== 0);
+
+    if (diasVisibles.length === 0) {
+      this.grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 20px;">Sin días disponibles.</div>';
+      return;
+    }
+
+    // 2. Calcular los espacios en blanco iniciales antes del primer día visible del mes
+    const primerDiaVisible = diasVisibles[0];
+    const primerDiaFecha = new Date(primerDiaVisible.fecha + 'T12:00:00');
+    const diaSemanaJs = primerDiaFecha.getDay(); // 0 = Domingo, 1 = Lunes, ...
+    
+    // Mapear a índice de columna (Lunes = 0, ..., Sábado = 5, Domingo = 6)
+    const colIndexPrimerDia = diaSemanaJs === 0 ? 6 : diaSemanaJs - 1;
 
     let html = '';
+
+    // Rellenar espacios vacíos al inicio de la primera fila
+    const columnasTotales = hayDomingosConCitas ? 7 : 6;
+    const offsetInicial = colIndexPrimerDia < columnasTotales ? colIndexPrimerDia : 0;
     
-    // Rellenar días vacíos antes del día 1
-    for (let i = 0; i < firstDayOfWeek; i++) {
+    for (let i = 0; i < offsetInicial; i++) {
       html += '<div></div>';
     }
 
-    daysData.forEach(dia => {
+    // 3. Renderizar cada celda del mes
+    diasVisibles.forEach(dia => {
       const dayNum = parseInt(dia.fecha.split('-')[2], 10);
-      let bgStyle = 'background: #e2e8df; color: #69786c; border: 1px solid #ccd5c8;';
-      let cursor = 'default';
-      
-      // 'no laboral', 'nada agendado', 'poco agendado', 'todo agendado'
+      const isToday = dia.fecha === this.todayStr;
+      const isSelected = dia.fecha === this.selectedDate;
+
+      // Determinar clase de color según regla de negocio
+      let statusClass = 'cal-status-bloqueado';
       if (dia.nivel_ocupacion === 'no laboral') {
-        bgStyle = 'background: #e2e8df; color: #69786c; border: 1px solid #ccd5c8;';
+        statusClass = 'cal-status-no-laboral';
+      } else if (dia.nivel_ocupacion === 'nada agendado') {
+        statusClass = 'cal-status-nada';
+      } else if (dia.nivel_ocupacion === 'parcial') {
+        statusClass = 'cal-status-parcial';
       } else if (dia.nivel_ocupacion === 'todo agendado') {
-        bgStyle = 'background: #fee2e2; border: 1px solid var(--danger); color: #991b1b; font-weight: 600; cursor: pointer;';
-        cursor = 'pointer';
-      } else if (dia.nivel_ocupacion === 'poco agendado' || dia.nivel_ocupacion === 'nada agendado') {
-        bgStyle = 'background: #dcfce7; border: 1px solid var(--primary); color: #166534; font-weight: 600; cursor: pointer;';
-        cursor = 'pointer';
+        statusClass = 'cal-status-todo';
+      } else if (dia.nivel_ocupacion === 'bloqueado') {
+        statusClass = 'cal-status-bloqueado';
       }
 
+      const classes = [
+        'cal-day-cell',
+        statusClass,
+        isToday ? 'cal-day-today' : '',
+        isSelected ? 'cal-day-selected' : ''
+      ].filter(Boolean).join(' ');
+
+      const ariaLabel = `${dayNum} de ${this.monthTitle.textContent}, ${dia.nivel_ocupacion}, ${dia.total_citas || 0} citas`;
+
       html += `
-        <div class="cal-day" data-fecha="${dia.fecha}" data-ocupacion="${dia.nivel_ocupacion}" style="aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: transform 0.1s; ${bgStyle}">
-          ${dayNum}
+        <div class="${classes}"
+             data-fecha="${dia.fecha}"
+             data-ocupacion="${dia.nivel_ocupacion}"
+             role="button"
+             tabindex="0"
+             aria-label="${ariaLabel}">
+          <span>${dayNum}</span>
         </div>
       `;
     });
 
     this.grid.innerHTML = html;
 
-    // Attach click events
-    this.grid.querySelectorAll('.cal-day').forEach(el => {
-      if (el.dataset.ocupacion !== 'no laboral') {
-        el.addEventListener('click', () => {
-          // simple highlight
-          this.grid.querySelectorAll('.cal-day').forEach(d => d.style.transform = 'scale(1)');
-          el.style.transform = 'scale(0.9)';
-          this.loadDayDetails(el.dataset.fecha);
-        });
-      }
+    // 4. Asignar manejadores de eventos táctiles y de clic
+    this.grid.querySelectorAll('.cal-day-cell').forEach(el => {
+      el.addEventListener('click', () => {
+        this.selectDay(el.dataset.fecha);
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.selectDay(el.dataset.fecha);
+        }
+      });
     });
   }
 
+  /**
+   * Gestiona la selección interactiva de un día.
+   * Actualiza los resaltados de selección manteniendo la forma circular en el día actual.
+   * @param {string} fecha Fecha en formato YYYY-MM-DD
+   */
+  selectDay(fecha) {
+    this.selectedDate = fecha;
+
+    // Actualizar clases de selección en la interfaz
+    this.grid.querySelectorAll('.cal-day-cell').forEach(cell => {
+      if (cell.dataset.fecha === fecha) {
+        cell.classList.add('cal-day-selected');
+      } else {
+        cell.classList.remove('cal-day-selected');
+      }
+    });
+
+    this.loadDayDetails(fecha);
+  }
+
+  /**
+   * Carga y muestra los detalles y citas del día seleccionado.
+   * @param {string} fecha Fecha en formato YYYY-MM-DD
+   */
   async loadDayDetails(fecha) {
     this.detailsContainer.style.display = 'block';
-    this.detailsTitle.textContent = `Citas del ${fecha}`;
-    this.detailsList.innerHTML = '<div class="spinner" style="margin: 0 auto;"></div>';
+    
+    // Formatear fecha amigable (ej. "Jueves 15 de Octubre de 2026")
+    const [y, m, d] = fecha.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const formatter = new Intl.DateTimeFormat('es-MX', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+    const fechaLegible = formatter.format(dateObj);
+
+    this.detailsTitle.textContent = `Citas: ${fechaLegible.charAt(0).toUpperCase() + fechaLegible.slice(1)}`;
+    this.btnAgendarDia.href = `#new-cita?fecha=${fecha}`;
+    this.detailsList.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
 
     try {
       const response = await ApiService.get(`/admin/citas?fecha=${fecha}`);
       const citas = response.data || [];
 
       if (citas.length === 0) {
-        this.detailsList.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay citas registradas este día.</p>';
+        this.detailsList.innerHTML = `
+          <div style="text-align: center; padding: 20px 0; color: var(--text-muted);">
+            <p style="margin-bottom: 8px;">No hay citas registradas para este día.</p>
+            <p style="font-size: 0.85rem; color: var(--text-subtle);">Usa el botón "+ Agendar Cita" para programar una atención.</p>
+          </div>
+        `;
         return;
       }
 
@@ -172,25 +348,30 @@ export default class CalendarView {
         if (cita.estado === 'cancelada') statusColor = 'var(--danger)';
 
         html += `
-          <div style="border-left: 4px solid ${statusColor}; padding-left: 12px; background: var(--bg-card-subtle); padding: 12px; border-radius: 0 8px 8px 0;">
-            <div style="display: flex; justify-content: space-between;">
-              <strong style="color: var(--text-main);">${cita.hora_inicio.substring(0, 5)}</strong>
-              <span style="font-size: 0.75rem; text-transform: uppercase; color: ${statusColor}; font-weight: bold;">${cita.estado}</span>
+          <div style="border-left: 4px solid ${statusColor}; padding: 12px; background: var(--bg-card-subtle); border-radius: 0 8px 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 180px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="color: var(--text-main); font-size: 1rem;">${cita.hora_inicio.substring(0, 5)} - ${cita.hora_fin.substring(0, 5)}</strong>
+                <span style="font-size: 0.75rem; text-transform: uppercase; color: ${statusColor}; font-weight: 700; background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px;">${cita.estado}</span>
+              </div>
+              <div style="margin-top: 4px; font-size: 0.95rem; color: var(--text-main); font-weight: 600;">${cita.cliente_nombre}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">${cita.servicio_nombre}</div>
             </div>
-            <div style="margin-top: 4px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;">${cita.cliente_nombre}</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">${cita.servicio_nombre}</div>
+            
+            <div>
+              <a href="#solicitud?id=${cita.cita_id || cita.id}" class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">
+                Ver Detalle
+              </a>
+            </div>
           </div>
         `;
       });
       html += '</div>';
 
       this.detailsList.innerHTML = html;
-      
-      // Hacer scroll suave hacia los detalles
-      this.detailsContainer.scrollIntoView({ behavior: 'smooth' });
 
     } catch (error) {
-      this.detailsList.innerHTML = `<p style="color: var(--danger);">Error: ${error.message}</p>`;
+      this.detailsList.innerHTML = `<p style="color: var(--danger); text-align: center;">Error al cargar citas: ${error.message}</p>`;
     }
   }
 }

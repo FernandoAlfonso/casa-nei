@@ -441,3 +441,150 @@ main#app-root {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ============================================================
+ * Estilos del Calendario Administrativo (Optimizado Móvil y Daltonismo)
+ * ============================================================ */
+.cal-grid-header {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.cal-grid-header.cols-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.cal-grid-header.cols-7 {
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.cal-grid-header .col-name {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  padding: 4px 0;
+}
+
+.cal-grid {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.cal-grid.cols-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.cal-grid.cols-7 {
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.cal-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  line-height: 1;
+}
+
+.cal-day-cell:active {
+  transform: scale(0.93);
+}
+
+/* Días No Laborales y Bloqueados (Gris) */
+.cal-day-cell.cal-status-bloqueado,
+.cal-day-cell.cal-status-no-laboral {
+  background: #f1f4f0;
+  border-color: #d1dcd0;
+  color: #7d8d81;
+  font-weight: 500;
+}
+
+.cal-day-cell.cal-status-no-laboral {
+  cursor: default;
+  opacity: 0.75;
+}
+
+/* Amarillo: Nada agendado (0 citas) */
+.cal-day-cell.cal-status-nada {
+  background: #fef9c3;
+  border-color: #facc15;
+  color: #854d0e;
+}
+
+/* Azul: Al menos un horario agendado (parcial) */
+.cal-day-cell.cal-status-parcial {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e40af;
+}
+
+/* Verde: Todo el día agendado */
+.cal-day-cell.cal-status-todo {
+  background: #dcfce7;
+  border-color: #4ade80;
+  color: #15803d;
+}
+
+/* Forma Circular para el Día Actual (Hoy) */
+.cal-day-cell.cal-day-today {
+  border-radius: 50% !important;
+  border-width: 2px !important;
+}
+
+/* Día Seleccionado (Mayor Intensidad y Resalte) */
+.cal-day-cell.cal-day-selected {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4.5px currentColor;
+  z-index: 2;
+  font-weight: 800;
+  filter: saturate(1.35) brightness(0.95);
+}
+
+/* Día Actual cuando está seleccionado: mantiene círculo y recibe alta intensidad */
+.cal-day-cell.cal-day-today.cal-day-selected {
+  border-radius: 50% !important;
+}
+
+/* Leyenda del Calendario */
+.cal-legend {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-light);
+  padding-top: 16px;
+}
+
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-legend-badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.cal-legend-badge.circle {
+  border-radius: 50%;
+}
+
