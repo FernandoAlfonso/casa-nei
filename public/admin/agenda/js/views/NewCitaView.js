@@ -47,14 +47,9 @@ export default class NewCitaView {
               </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 24px;">
               <label class="form-label">Notas Internas</label>
               <textarea id="nc_notas" class="form-input" rows="2" placeholder="Motivo de consulta o comentarios extra"></textarea>
-            </div>
-
-            <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
-              <input type="checkbox" id="nc_confirmar" style="width: 20px; height: 20px;">
-              <label for="nc_confirmar" style="font-size: 0.9rem;">Confirmar cita inmediatamente</label>
             </div>
 
             <button type="submit" id="btnSubmitNC" class="btn btn-add">Agendar Cita</button>
@@ -109,7 +104,7 @@ export default class NewCitaView {
       fecha_cita: document.getElementById('nc_fecha').value,
       hora_inicio: document.getElementById('nc_hora').value,
       notas_admin: document.getElementById('nc_notas').value || null,
-      confirmar_inmediatamente: document.getElementById('nc_confirmar').checked,
+      confirmar_inmediatamente: true,
       canal: 'admin'
     };
 
@@ -124,8 +119,9 @@ export default class NewCitaView {
         window.open(response.data.whatsapp_url, '_blank');
       }
 
-      // Regresar al Home
-      window.location.hash = '#home';
+      // Redirigir al Calendario en la fecha agendada
+      const fechaCita = payload.fecha_cita;
+      window.location.hash = fechaCita ? `#calendar?fecha=${fechaCita}` : '#calendar';
 
     } catch (error) {
       this.errorDiv.textContent = error.message;

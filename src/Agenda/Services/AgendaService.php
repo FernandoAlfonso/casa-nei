@@ -368,7 +368,7 @@ class AgendaService
     string $horaInicio,
     ?string $notasAdmin = null,
     ?string $notasCliente = null,
-    bool $confirmarInmediatamente = false,
+    bool $confirmarInmediatamente = true,
     ?bool $tieneWhatsapp = null,
     string $canal = 'admin'
   ): array {

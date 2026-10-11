@@ -9,9 +9,22 @@ class AgendaServiceTest extends TestCase
 {
     private AgendaService $service;
 
+    private ?int $citaCreadaId = null;
+
     public function setUp(): void
     {
         $this->service = new AgendaService();
+    }
+
+    public function tearDown(): void
+    {
+        if ($this->citaCreadaId !== null) {
+            \App\Shared\Db\Database::getInstance()->execute(
+                "DELETE FROM citas WHERE id = :id",
+                ['id' => $this->citaCreadaId]
+            );
+            $this->citaCreadaId = null;
+        }
     }
 
     public function testObtenerCatalogoServicios()
@@ -34,5 +47,21 @@ class AgendaServiceTest extends TestCase
         // pero validamos que el comportamiento del método sea devolver null y no falle.
         $cliente = $this->service->consultarClientePorTelefono("0000000000");
         $this->assertTrue($cliente === null || is_array($cliente), "Debe devolver null o un array con datos");
+    }
+
+    public function testAgendarCitaAdminPorDefectoEsConfirmada()
+    {
+        $resultado = $this->service->agendarCitaAdmin(
+            nombreCompleto: "Paciente Test Admin",
+            telefono: "3121112233",
+            servicioId: 1,
+            fechaCita: "2099-12-01",
+            horaInicio: "09:00:00",
+            notasAdmin: "Prueba agendar admin por defecto confirmada"
+        );
+
+        $this->assertTrue(isset($resultado['cita_id']), "Debe retornar el ID de la cita");
+        $this->citaCreadaId = (int) $resultado['cita_id'];
+        $this->assertEquals('confirmada', $resultado['estado'], "La cita agendada por admin debe tener estado 'confirmada' por defecto");
     }
 }

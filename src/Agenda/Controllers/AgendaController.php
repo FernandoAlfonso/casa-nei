@@ -311,7 +311,7 @@ class AgendaController
       $notasCliente = $request->get('notas_cliente');
 
       $confirmarInmediatamente = filter_var(
-        $request->get('confirmar_inmediatamente', false),
+        $request->get('confirmar_inmediatamente', true),
         FILTER_VALIDATE_BOOLEAN
       );
 
