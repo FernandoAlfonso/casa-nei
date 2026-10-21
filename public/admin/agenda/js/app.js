@@ -1,3 +1,12 @@
+/**
+ * Casa Nei - Punto de Entrada de la Aplicación Administrativa (PWA)
+ *
+ * Configura rutas, guardia de autenticación, Service Worker, Web Push
+ * y listeners globales de interacción.
+ *
+ * @module app
+ */
+
 import Router from './router.js';
 import LoginView from './views/LoginView.js';
 import HomeView from './views/HomeView.js';
@@ -11,7 +20,7 @@ import ServicesView from './views/config/ServicesView.js';
 import HorariosView from './views/config/HorariosView.js';
 import BloqueosView from './views/config/BloqueosView.js';
 
-// Define Application Routes
+// Definición del mapa de rutas de la aplicación
 const routes = {
   'login': LoginView,
   'home': HomeView,

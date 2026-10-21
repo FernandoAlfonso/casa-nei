@@ -1,17 +1,38 @@
+/**
+ * Casa Nei - Enrutador SPA basado en Hash
+ *
+ * Administra la navegación y ciclo de vida de las vistas administrativas.
+ * Soporta parámetros de consulta en el hash (ej. #calendar?fecha=2026-10-21)
+ * y transiciones nativas mediante View Transitions API si están soportadas.
+ *
+ * @module router
+ */
+
+/**
+ * Clase que gestiona el enrutamiento de la SPA.
+ */
 export default class Router {
+  /**
+   * Crea una instancia del enrutador.
+   *
+   * @param {Object<string, Function>} routes - Mapeo de rutas a clases de vista
+   * @param {string} [appRootId='app-root'] - ID del elemento DOM raíz donde se renderizan las vistas
+   */
   constructor(routes, appRootId = 'app-root') {
     this.routes = routes;
     this.appRoot = document.getElementById(appRootId);
     
-    // Bind current view reference
+    /** @type {Object|null} Referencia a la vista actualmente activa */
     this.currentView = null;
     
-    // Listen to hash changes
+    // Escuchar cambios de hash en la ventana
     window.addEventListener('hashchange', () => this.handleRoute());
   }
 
+  /**
+   * Inicializa el enrutador resolviendo la ruta inicial o cayendo a #home.
+   */
   init() {
-    // Check initial route, fallback to default or home
     if (!window.location.hash) {
       window.location.hash = '#home';
     } else {
@@ -19,11 +40,16 @@ export default class Router {
     }
   }
 
+  /**
+   * Maneja el cambio de ruta actualizando el DOM y montando la nueva vista.
+   *
+   * @returns {Promise<void>}
+   */
   async handleRoute() {
     const rawHash = window.location.hash.substring(1) || 'home';
     const [path, queryString] = rawHash.split('?');
     
-    // Parse query string into an object
+    // Parsear parámetros de consulta a objeto clave-valor
     const queryParams = {};
     if (queryString) {
       const urlParams = new URLSearchParams(queryString);
@@ -34,12 +60,12 @@ export default class Router {
 
     const viewClass = this.routes[path] || this.routes['home'];
 
-    // Unmount current view if it has cleanup logic
+    // Desmontar vista actual si cuenta con lógica de limpieza
     if (this.currentView && typeof this.currentView.unmount === 'function') {
       this.currentView.unmount();
     }
 
-    // Instanciate new view
+    // Instanciar nueva vista
     this.currentView = new viewClass();
     
     const renderNewView = () => {
@@ -47,11 +73,11 @@ export default class Router {
       if (typeof this.currentView.mount === 'function') {
         this.currentView.mount(queryParams);
       }
-      // Update Navigation UI
+      // Actualizar UI de navegación
       this.updateNavUI(path);
     };
 
-    // Use View Transitions API if supported for instant native feeling, else just render immediately
+    // Usar View Transitions API si está soportada en el navegador
     if (document.startViewTransition) {
       document.startViewTransition(() => renderNewView());
     } else {
@@ -59,6 +85,11 @@ export default class Router {
     }
   }
 
+  /**
+   * Actualiza el estado activo de los enlaces en la barra de navegación.
+   *
+   * @param {string} activeHash - La ruta actual activa
+   */
   updateNavUI(activeHash) {
     document.querySelectorAll('.nav-item').forEach(el => {
       el.classList.remove('active');

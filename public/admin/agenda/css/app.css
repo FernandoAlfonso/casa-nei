@@ -1,6 +1,13 @@
 /* 
  * Casa Nei - Admin PWA Styles 
  * Minimalist Light Design System (Sin blanco puro)
+ * Accesible para daltonismo rojo-verde (deuteranomalia/deuteranopia)
+ *
+ * Estrategia de accesibilidad:
+ *  - Iconos SVG como diferenciador PRIMARIO (no el color)
+ *  - Paleta del calendario: amarillo → azul → índigo (segura para daltonismo rojo-verde)
+ *  - Botones de acción: icono + forma + color (triple redundancia)
+ *  - Patrones CSS en celdas del calendario para distinción adicional
  */
 
 :root {
@@ -16,7 +23,8 @@
   --text-main: #19241c;
   --text-muted: #5e6d63;
   --text-subtle: #829186;
-  --text-on-color: #f4f8f4; /* Texto claro para botones de color (no blanco puro) */
+  --text-on-color: #f4f8f4;
+  /* Texto claro para botones de color (no blanco puro) */
 
   /* Bordes limpios y sutiles */
   --border: #d4ded1;
@@ -30,13 +38,24 @@
   --danger: #dc2626;
   --danger-glow: rgba(220, 38, 38, 0.12);
 
-  /* Reglas de botones solicitadas: */
+  /* ============================================================
+   * Reglas de botones — Triple redundancia para daltonismo:
+   *   1. Icono SVG simbólico
+   *   2. Color diferente por función
+   *   3. Diferencia de luminancia (oscuro vs claro)
+   * ============================================================ */
+
   /* Verde: Agregar y Aceptar */
   --btn-green-bg: #15803d;
   --btn-green-hover: #166534;
   --btn-green-text: #f4f8f4;
 
-  /* Rojo: Eliminar y Rechazar */
+  /* Naranja-oscuro: Eliminar y Rechazar (reemplaza rojo; mayor contraste vs verde) */
+  --btn-orange-bg: #c2410c;
+  --btn-orange-hover: #9a3412;
+  --btn-orange-text: #fff7ed;
+
+  /* Rojo: Sigue existiendo como variable para compatibilidad pero NO se usa en calendarios */
   --btn-red-bg: #dc2626;
   --btn-red-hover: #b91c1c;
   --btn-red-text: #fdf3f3;
@@ -51,6 +70,39 @@
   --btn-sec-hover: #dbe3d8;
   --btn-sec-border: #ccd6c8;
   --btn-sec-text: #19241c;
+
+  /* ============================================================
+   * Colores del Calendario — Seguros para daltonismo rojo-verde
+   * Escala: Ámbar → Azul claro → Índigo (reemplaza Amarillo→Azul→Verde)
+   * ============================================================ */
+
+  /* Estado: Nada agendado — Ámbar/Amarillo oscuro */
+  --cal-nada-bg: #fef3c7;
+  --cal-nada-border: #f59e0b;
+  --cal-nada-text: #78350f;
+
+  /* Estado: Parcialmente agendado — Azul claro */
+  --cal-parcial-bg: #dbeafe;
+  --cal-parcial-border: #3b82f6;
+  --cal-parcial-text: #1e40af;
+
+  /* Estado: Todo agendado — Índigo (reemplaza verde) */
+  --cal-todo-bg: #e0e7ff;
+  --cal-todo-border: #6366f1;
+  --cal-todo-text: #3730a3;
+
+  /* Estado: Bloqueado — Gris neutro */
+  --cal-bloqueado-bg: #f1f4f0;
+  --cal-bloqueado-border: #d1dcd0;
+  --cal-bloqueado-text: #7d8d81;
+
+  /* Estado: Citas — colores semánticos (con iconos como diferenciador primario) */
+  --cita-confirmada: #3b82f6;
+  /* Azul — Confirmada */
+  --cita-pendiente: #f59e0b;
+  /* Ámbar — Pendiente */
+  --cita-cancelada: #c2410c;
+  /* Naranja oscuro — Cancelada */
 
   --radius-xl: 24px;
   --radius-lg: 18px;
@@ -84,7 +136,10 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
   line-height: 1.25;
@@ -140,12 +195,14 @@ h1 {
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
+  color: var(--primary);
 }
 
 /* Main Content Area */
 main#app-root {
   flex: 1;
-  padding: 24px 16px 100px 16px; /* Padding bottom accounts for mobile nav */
+  padding: 24px 16px 100px 16px;
+  /* Padding bottom accounts for mobile nav */
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -175,6 +232,7 @@ main#app-root {
 .app-nav.hidden {
   transform: translateY(150%);
 }
+
 .top-bar.hidden {
   display: none;
 }
@@ -197,6 +255,16 @@ main#app-root {
   font-size: 1.4rem;
   margin-bottom: 2px;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Íconos SVG dentro del nav */
+.nav-item .icon svg,
+.nav-item .icon .bi {
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 .nav-item.active {
@@ -217,7 +285,7 @@ main#app-root {
   #app-shell {
     flex-direction: row;
   }
-  
+
   .top-bar {
     display: none;
   }
@@ -236,7 +304,7 @@ main#app-root {
     box-shadow: none;
     transform: none !important;
   }
-  
+
   .app-nav.hidden {
     display: none;
   }
@@ -251,6 +319,12 @@ main#app-root {
   .nav-item .icon {
     margin-bottom: 0;
     font-size: 1.25rem;
+  }
+
+  .nav-item .icon svg,
+  .nav-item .icon .bi {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   main#app-root {
@@ -278,7 +352,10 @@ main#app-root {
   gap: 10px;
 }
 
-/* Buttons System */
+/* ============================================================
+ * Sistema de Botones — Con iconos SVG para daltonismo
+ * Accesibilidad: Icono (forma) + Color + Luminancia = Triple redundancia
+ * ============================================================ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -297,6 +374,13 @@ main#app-root {
   width: 100%;
 }
 
+/* Íconos SVG dentro de botones */
+.btn .bi {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
 .btn:active {
   transform: scale(0.98);
 }
@@ -310,6 +394,7 @@ main#app-root {
   color: var(--btn-green-text) !important;
   border: 1px solid transparent;
 }
+
 .btn-add:hover,
 .btn-create:hover,
 .btn-new:hover,
@@ -323,34 +408,37 @@ main#app-root {
   color: var(--btn-green-text) !important;
   border: 1px solid transparent;
 }
+
 .btn-accept:hover {
   background: var(--btn-green-hover) !important;
 }
 
-/* Rojo: Eliminar */
+/* Naranja-oscuro: Eliminar (antes era rojo, ahora suficiente diferencia de luminancia vs verde) */
 .btn-delete,
 .btn-danger,
 .btn-del,
 .btn-remove-turno {
-  background: var(--btn-red-bg) !important;
-  color: var(--btn-red-text) !important;
+  background: var(--btn-orange-bg) !important;
+  color: var(--btn-orange-text) !important;
   border: 1px solid transparent;
 }
+
 .btn-delete:hover,
 .btn-danger:hover,
 .btn-del:hover,
 .btn-remove-turno:hover {
-  background: var(--btn-red-hover) !important;
+  background: var(--btn-orange-hover) !important;
 }
 
-/* Rojo: Rechazar */
+/* Naranja-oscuro: Rechazar */
 .btn-reject {
-  background: var(--btn-red-bg) !important;
-  color: var(--btn-red-text) !important;
+  background: var(--btn-orange-bg) !important;
+  color: var(--btn-orange-text) !important;
   border: 1px solid transparent;
 }
+
 .btn-reject:hover {
-  background: var(--btn-red-hover) !important;
+  background: var(--btn-orange-hover) !important;
 }
 
 /* Azul: Guardar datos */
@@ -359,6 +447,7 @@ main#app-root {
   color: var(--btn-blue-text) !important;
   border: 1px solid transparent;
 }
+
 .btn-save:hover {
   background: var(--btn-blue-hover) !important;
 }
@@ -370,6 +459,7 @@ main#app-root {
   box-shadow: none;
   border: 1px solid var(--btn-sec-border) !important;
 }
+
 .btn-secondary:hover {
   background: var(--btn-sec-hover) !important;
 }
@@ -387,6 +477,12 @@ main#app-root {
   font-weight: 600;
 }
 
+/* Asterisco de campo requerido — Usa azul oscuro en lugar de rojo para daltonismo */
+.required-star {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
 .form-input {
   width: 100%;
   background: var(--bg-input);
@@ -397,6 +493,8 @@ main#app-root {
   font-family: inherit;
   font-size: 0.95rem;
   transition: border-color 0.2s, box-shadow 0.2s;
+  /* Previene desbordamiento en Android con inputs nativos */
+  min-width: 0;
 }
 
 .form-input:focus {
@@ -429,7 +527,9 @@ main#app-root {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Animations */
@@ -438,12 +538,20 @@ main#app-root {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================================
- * Estilos del Calendario Administrativo (Optimizado Móvil y Daltonismo)
+ * Estilos del Calendario Administrativo
+ * Accesible para daltonismo: paleta ámbar→azul→índigo + iconos + patrones
  * ============================================================ */
 .cal-grid-header {
   display: grid;
@@ -489,7 +597,7 @@ main#app-root {
   align-items: center;
   justify-content: center;
   font-family: 'Outfit', sans-serif;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   border-radius: 8px;
   border: 1.5px solid transparent;
@@ -498,51 +606,97 @@ main#app-root {
   position: relative;
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
   line-height: 1;
+  gap: 2px;
+}
+
+/* Ícono de estado dentro de la celda del calendario */
+.cal-day-cell .cal-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.95;
+  margin-top: 1px;
+}
+
+.cal-day-cell .cal-status-icon svg,
+.cal-day-cell .cal-status-icon .bi {
+  width: 1em;
+  height: 1em;
 }
 
 .cal-day-cell:active {
   transform: scale(0.93);
 }
 
-/* Días No Laborales y Bloqueados (Gris) */
+/* ---- Días No Laborales y Bloqueados (Gris) ---- */
 .cal-day-cell.cal-status-bloqueado,
 .cal-day-cell.cal-status-no-laboral {
-  background: #f1f4f0;
-  border-color: #d1dcd0;
-  color: #7d8d81;
+  background: var(--cal-bloqueado-bg);
+  border-color: var(--cal-bloqueado-border);
+  color: var(--cal-bloqueado-text);
   font-weight: 500;
 }
 
+/* Patrón de puntos para bloqueados */
+.cal-day-cell.cal-status-bloqueado {
+  background-image: radial-gradient(circle, var(--cal-bloqueado-border) 1px, transparent 1px);
+  background-size: 6px 6px;
+  background-color: var(--cal-bloqueado-bg);
+}
+
+/* Patrón de rayas para no-laboral */
 .cal-day-cell.cal-status-no-laboral {
   cursor: default;
-  opacity: 0.75;
+  opacity: 0.7;
+  background-image: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 3px,
+      var(--cal-bloqueado-border) 3px,
+      var(--cal-bloqueado-border) 4px);
+  background-color: var(--cal-bloqueado-bg);
 }
 
-/* Amarillo: Nada agendado (0 citas) */
+/* ---- Ámbar: Nada agendado (0 citas) ---- */
 .cal-day-cell.cal-status-nada {
-  background: #fef9c3;
-  border-color: #facc15;
-  color: #854d0e;
+  background: var(--cal-nada-bg);
+  border-color: var(--cal-nada-border);
+  color: var(--cal-nada-text);
 }
 
-/* Azul: Al menos un horario agendado (parcial) */
+/* ---- Azul claro: Al menos un horario agendado (parcial) ---- */
 .cal-day-cell.cal-status-parcial {
-  background: #dbeafe;
-  border-color: #60a5fa;
-  color: #1e40af;
+  background: var(--cal-parcial-bg);
+  border-color: var(--cal-parcial-border);
+  color: var(--cal-parcial-text);
+  /* Patrón sutil de rayas diagonales */
+  background-image: repeating-linear-gradient(-45deg,
+      transparent,
+      transparent 5px,
+      rgba(59, 130, 246, 0.12) 5px,
+      rgba(59, 130, 246, 0.12) 6px);
+  background-color: var(--cal-parcial-bg);
 }
 
-/* Verde: Todo el día agendado */
+/* ---- Índigo: Todo el día agendado (reemplaza verde) ---- */
 .cal-day-cell.cal-status-todo {
-  background: #dcfce7;
-  border-color: #4ade80;
-  color: #15803d;
+  background: var(--cal-todo-bg);
+  border-color: var(--cal-todo-border);
+  color: var(--cal-todo-text);
 }
 
-/* Forma Circular para el Día Actual (Hoy) */
+/* Forma Circular y Rayitas para el Día Actual (Hoy) */
 .cal-day-cell.cal-day-today {
   border-radius: 50% !important;
-  border-width: 2px !important;
+  border-width: 1px !important;
+  border-color: currentColor !important;
+  /* Rayitas diagonales distintivas para Hoy */
+  background-image: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.18) 3px,
+      rgba(0, 0, 0, 0.25) 4px) !important;
 }
 
 /* Día Seleccionado (Mayor Intensidad y Resalte) */
@@ -554,16 +708,24 @@ main#app-root {
   filter: saturate(1.35) brightness(0.95);
 }
 
-/* Día Actual cuando está seleccionado: mantiene círculo y recibe alta intensidad */
+/* Día Actual cuando está seleccionado: mantiene círculo, rayitas y recibe alta intensidad */
 .cal-day-cell.cal-day-today.cal-day-selected {
   border-radius: 50% !important;
+  border-color: currentColor !important;
+  background-image: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.25) 3px,
+      rgba(0, 0, 0, 0.25) 4px) !important;
 }
 
-/* Leyenda del Calendario */
+/* ============================================================
+ * Leyenda del Calendario — Con iconos y patrones
+ * ============================================================ */
 .cal-legend {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -577,14 +739,139 @@ main#app-root {
   gap: 8px;
 }
 
+/* Badge de la leyenda — Imita el aspecto de la celda del calendario */
 .cal-legend-badge {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  border: 1.5px solid;
 }
 
 .cal-legend-badge.circle {
   border-radius: 50%;
 }
 
+/* Badge: Nada agendado */
+.cal-legend-badge.badge-nada {
+  background: var(--cal-nada-bg);
+  border-color: var(--cal-nada-border);
+  color: var(--cal-nada-text);
+}
+
+/* Badge: Parcialmente agendado — con patrón de rayas */
+.cal-legend-badge.badge-parcial {
+  background-image: repeating-linear-gradient(-45deg,
+      transparent,
+      transparent 3px,
+      rgba(59, 130, 246, 0.2) 3px,
+      rgba(59, 130, 246, 0.2) 4px);
+  background-color: var(--cal-parcial-bg);
+  border-color: var(--cal-parcial-border);
+  color: var(--cal-parcial-text);
+}
+
+/* Badge: Todo agendado */
+.cal-legend-badge.badge-todo {
+  background: var(--cal-todo-bg);
+  border-color: var(--cal-todo-border);
+  color: var(--cal-todo-text);
+}
+
+/* Badge: Bloqueado — con patrón de puntos */
+.cal-legend-badge.badge-bloqueado {
+  background-image: radial-gradient(circle, var(--cal-bloqueado-border) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-color: var(--cal-bloqueado-bg);
+  border-color: var(--cal-bloqueado-border);
+  color: var(--cal-bloqueado-text);
+}
+
+/* Badge: No laboral — con rayas */
+.cal-legend-badge.badge-no-laboral {
+  background-image: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 2px,
+      var(--cal-bloqueado-border) 2px,
+      var(--cal-bloqueado-border) 3px);
+  background-color: var(--cal-bloqueado-bg);
+  border-color: var(--cal-bloqueado-border);
+  color: var(--cal-bloqueado-text);
+  opacity: 0.7;
+}
+
+/* Badge: Hoy — Círculo con rayas diagonales y borde destacado idéntico a la celda del calendario */
+.cal-legend-badge.badge-hoy {
+  border-radius: 50% !important;
+  border: 2px solid var(--text-main) !important;
+  background-color: var(--cal-nada-bg);
+  background-image: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.2) 3px,
+      rgba(0, 0, 0, 0.2) 4px) !important;
+  color: var(--text-main);
+}
+
+/* ============================================================
+ * Tarjetas de Citas — Con borde lateral + icono de estado
+ * Accesibilidad: Azul=confirmada, Ámbar=pendiente, Naranja-oscuro=cancelada
+ * ============================================================ */
+.cita-card {
+  border-radius: 0 8px 8px 0;
+  padding: 12px;
+  background: var(--bg-card-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cita-card.cita-confirmada {
+  border-left: 4px solid var(--cita-confirmada);
+}
+
+.cita-card.cita-pendiente {
+  border-left: 4px solid var(--cita-pendiente);
+}
+
+.cita-card.cita-cancelada {
+  border-left: 4px solid var(--cita-cancelada);
+}
+
+/* Badge de estado en citas */
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.estado-badge .bi {
+  width: 0.8em;
+  height: 0.8em;
+}
+
+.estado-badge.badge-confirmada {
+  color: var(--cita-confirmada);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.estado-badge.badge-pendiente {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.estado-badge.badge-cancelada {
+  color: var(--cita-cancelada);
+  background: rgba(194, 65, 12, 0.1);
+}

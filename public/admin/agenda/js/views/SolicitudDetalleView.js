@@ -1,6 +1,33 @@
-import ApiService from '../services/api.js';
+/**
+ * Casa Nei - Vista de Detalle de Solicitud
+ *
+ * Accesibilidad para daltonismo:
+ *  - Botón Aceptar: icono ✓ (check) + verde
+ *  - Botón Rechazar: icono ✕ (x) + naranja-oscuro
+ *  - Iconos SVG en lugar de emojis para consistencia entre plataformas
+ *
+ * @module views/SolicitudDetalleView
+ */
 
+import ApiService from '../services/api.js';
+import {
+  iconCheckCircleFill,
+  iconXCircleFill,
+  iconArrowLeft,
+  iconChatDotsFill,
+  iconCardChecklist
+} from '../icons.js';
+
+/**
+ * Vista de detalle de una solicitud de cita específica.
+ * Permite aceptar o rechazar la solicitud con botones claramente diferenciados.
+ */
 export default class SolicitudDetalleView {
+  /**
+   * Renderiza el markup HTML estructural de la vista de detalle.
+   *
+   * @returns {string} Markup HTML
+   */
   render() {
     return `
       <div class="fade-in">
@@ -9,8 +36,8 @@ export default class SolicitudDetalleView {
             <h1 style="font-size: 1.8rem;">Detalle de Solicitud</h1>
             <p style="color: var(--text-muted); font-size: 0.9rem;">Gestiona esta cita pendiente</p>
           </div>
-          <button class="btn" onclick="window.location.hash='#home'" style="width: auto; padding: 10px 16px; font-size: 0.9rem; gap: 6px;">
-            ⬅️ Volver
+          <button class="btn btn-secondary" onclick="window.location.hash='#home'" style="width: auto; padding: 10px 16px; font-size: 0.9rem; gap: 6px;">
+            ${iconArrowLeft('icon-btn')} Volver
           </button>
         </header>
 
@@ -26,6 +53,13 @@ export default class SolicitudDetalleView {
     `;
   }
 
+  /**
+   * Monta la vista: extrae el ID de la cita de los params y carga el detalle.
+   *
+   * @param {Object} [params={}] - Parámetros de la URL
+   * @param {string} [params.id] - ID de la cita
+   * @returns {Promise<void>}
+   */
   async mount(params = {}) {
     this.container = document.getElementById('solicitud-detalle-container');
     this.citaId = parseInt(params.id, 10);
@@ -42,6 +76,12 @@ export default class SolicitudDetalleView {
     await this.loadSolicitud();
   }
 
+  /**
+   * Carga los datos de la solicitud desde la API.
+   * Reutiliza el endpoint de solicitudes y filtra por ID.
+   *
+   * @returns {Promise<void>}
+   */
   async loadSolicitud() {
     try {
       // Reutilizamos el endpoint de solicitudes ya que no hay uno individual
@@ -52,7 +92,7 @@ export default class SolicitudDetalleView {
       if (!cita) {
         this.container.innerHTML = `
           <div style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
-            <div style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5;">❓</div>
+            <div style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5;">${iconCardChecklist()}</div>
             <p>La solicitud no fue encontrada. Es posible que ya haya sido procesada.</p>
           </div>
         `;
@@ -69,7 +109,26 @@ export default class SolicitudDetalleView {
     }
   }
 
+  /**
+   * Renderiza el detalle de una cita con botones de acción accesibles.
+   * Botones diferenciados por: icono (forma) + color + luminancia.
+   *
+   * @param {Object} cita - Datos de la cita
+   * @param {string} cita.cliente_nombre - Nombre del cliente
+   * @param {string} cita.servicio_nombre - Nombre del servicio
+   * @param {string} cita.fecha_cita - Fecha de la cita
+   * @param {string} cita.hora_inicio - Hora de inicio
+   * @param {string} cita.cliente_telefono - Teléfono del cliente
+   * @param {boolean} cita.tiene_whatsapp - Si tiene WhatsApp
+   * @param {string} [cita.notas_cliente] - Notas del cliente
+   * @param {number} cita.cita_id - ID de la cita
+   */
   renderDetalle(cita) {
+    // Indicador de WhatsApp con icono SVG
+    const whatsappIndicator = cita.tiene_whatsapp
+      ? `<span style="color: #16a34a; display: inline-flex; align-items: center; gap: 4px;">${iconChatDotsFill()} WhatsApp</span>`
+      : '';
+
     const html = `
       <div style="border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; background: var(--bg-card-subtle);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
@@ -78,26 +137,30 @@ export default class SolicitudDetalleView {
             <p style="font-size: 0.85rem; color: var(--primary); font-weight: 600;">${cita.servicio_nombre}</p>
           </div>
           <div style="text-align: right; font-size: 0.85rem; color: var(--text-muted);">
-            <div>📅 ${cita.fecha_cita}</div>
-            <div>🕒 ${cita.hora_inicio.substring(0, 5)}</div>
+            <div>${iconCardChecklist()} ${cita.fecha_cita}</div>
+            <div style="margin-top: 2px;">🕒 ${cita.hora_inicio.substring(0, 5)}</div>
           </div>
         </div>
         
         <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-          <p><strong>Teléfono:</strong> ${cita.cliente_telefono || 'No proporcionado'} ${cita.tiene_whatsapp ? '🟢 (WhatsApp)' : ''}</p>
+          <p><strong>Teléfono:</strong> ${cita.cliente_telefono || 'No proporcionado'} ${whatsappIndicator}</p>
           ${cita.notas_cliente ? `<p style="margin-top: 4px;"><strong>Notas:</strong> ${cita.notas_cliente}</p>` : ''}
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px;">
-          <button class="btn btn-accept" data-id="${cita.cita_id}" style="width: 100%; padding: 12px; font-size: 1rem;">✅ Aceptar Solicitud</button>
-          <button class="btn btn-reject" data-id="${cita.cita_id}" style="width: 100%; padding: 12px; font-size: 1rem;">❌ Rechazar Solicitud</button>
+          <button class="btn btn-accept" data-id="${cita.cita_id}" style="width: 100%; padding: 14px; font-size: 1rem;">
+            ${iconCheckCircleFill('icon-btn')} Aceptar Solicitud
+          </button>
+          <button class="btn btn-reject" data-id="${cita.cita_id}" style="width: 100%; padding: 14px; font-size: 1rem;">
+            ${iconXCircleFill('icon-btn')} Rechazar Solicitud
+          </button>
         </div>
       </div>
     `;
 
     this.container.innerHTML = html;
 
-    // Attach events
+    // Asignar eventos
     const btnAccept = this.container.querySelector('.btn-accept');
     const btnReject = this.container.querySelector('.btn-reject');
 
@@ -110,8 +173,16 @@ export default class SolicitudDetalleView {
     }
   }
 
+  /**
+   * Maneja la acción de aceptar la solicitud.
+   * Solicita mensaje opcional y confirma la cita via API.
+   *
+   * @param {string} citaId - ID de la cita a confirmar
+   * @param {HTMLButtonElement} btn - Botón que disparó la acción
+   * @returns {Promise<void>}
+   */
   async handleAccept(citaId, btn) {
-    const msg = prompt("¿Deseas agregar algún mensaje o indicación al paciente al confirmar? (Opcional)");
+    const msg = prompt('¿Deseas agregar algún mensaje o indicación al paciente al confirmar? (Opcional)');
     if (msg === null) return; // Cancelado
 
     try {
@@ -130,14 +201,22 @@ export default class SolicitudDetalleView {
       // Regresar al listado general después de aceptar
       window.location.hash = '#home';
     } catch (error) {
-      alert("Error al confirmar: " + error.message);
+      alert('Error al confirmar: ' + error.message);
       btn.disabled = false;
-      btn.innerHTML = '✅ Aceptar Solicitud';
+      btn.innerHTML = `${iconCheckCircleFill('icon-btn')} Aceptar Solicitud`;
     }
   }
 
+  /**
+   * Maneja la acción de rechazar la solicitud.
+   * Solicita motivo opcional y cancela la cita via API.
+   *
+   * @param {string} citaId - ID de la cita a rechazar
+   * @param {HTMLButtonElement} btn - Botón que disparó la acción
+   * @returns {Promise<void>}
+   */
   async handleReject(citaId, btn) {
-    const motivo = prompt("Motivo del rechazo / cancelación (Opcional):");
+    const motivo = prompt('Motivo del rechazo / cancelación (Opcional):');
     if (motivo === null) return; // Cancelado
 
     try {
@@ -156,9 +235,9 @@ export default class SolicitudDetalleView {
       // Regresar al listado general después de rechazar
       window.location.hash = '#home';
     } catch (error) {
-      alert("Error al cancelar: " + error.message);
+      alert('Error al cancelar: ' + error.message);
       btn.disabled = false;
-      btn.innerHTML = '❌ Rechazar Solicitud';
+      btn.innerHTML = `${iconXCircleFill('icon-btn')} Rechazar Solicitud`;
     }
   }
 }

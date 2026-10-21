@@ -1,9 +1,24 @@
 /**
  * Casa Nei - Vista de Calendario Mensual para Panel Administrativo
+ *
+ * Accesibilidad para daltonismo rojo-verde (deuteranomalía/deuteranopía):
+ *  - Estados del calendario diferenciados por: color + icono SVG + patrón CSS
+ *  - Paleta segura: ámbar (nada) → azul (parcial) → índigo (todo)
+ *  - Detalle de citas con iconos de estado como diferenciador primario
+ *
  * @module views/CalendarView
  */
 
 import ApiService from '../services/api.js';
+import {
+  iconCircle,
+  iconCircleHalf,
+  iconCheckCircleFill,
+  iconSlashCircle,
+  iconExclamationTriangleFill,
+  iconXCircleFill,
+  iconPlusCircleFill
+} from '../icons.js';
 
 /**
  * Clase que gestiona la vista del calendario mensual administrativo.
@@ -13,16 +28,18 @@ import ApiService from '../services/api.js';
 export default class CalendarView {
   constructor() {
     this.currentDate = new Date();
-    // Mes actual en formato YYYY-MM
+    /** @type {string} Mes actual en formato YYYY-MM */
     this.currentMonth = `${this.currentDate.getFullYear()}-${String(this.currentDate.getMonth() + 1).padStart(2, '0')}`;
-    // Fecha de hoy en formato YYYY-MM-DD
+    /** @type {string} Fecha de hoy en formato YYYY-MM-DD */
     this.todayStr = `${this.currentDate.getFullYear()}-${String(this.currentDate.getMonth() + 1).padStart(2, '0')}-${String(this.currentDate.getDate()).padStart(2, '0')}`;
-    // Día seleccionado actualmente
+    /** @type {string} Día seleccionado actualmente */
     this.selectedDate = this.todayStr;
   }
 
   /**
    * Renderiza el markup HTML estructural de la vista del calendario.
+   * La leyenda usa iconos SVG + patrones CSS para ser accesible a daltónicos.
+   *
    * @returns {string} Markup HTML
    */
   render() {
@@ -55,27 +72,35 @@ export default class CalendarView {
             <div style="grid-column: 1 / -1; padding: 24px; text-align: center;">Cargando calendario...</div>
           </div>
 
-          <!-- Leyenda accesible de colores y estados -->
-          <div class="cal-legend">
-            <div class="cal-legend-item">
-              <div class="cal-legend-badge" style="background: #fef9c3; border: 1.5px solid #facc15;"></div>
-              <span>Amarillo: Nada agendado</span>
+          <!-- Leyenda accesible: color + icono SVG + patrón CSS -->
+          <div class="cal-legend" role="list" aria-label="Leyenda del calendario">
+            <div class="cal-legend-item" role="listitem">
+              <div class="cal-legend-badge badge-nada" aria-hidden="true">
+                ${iconCircle()}
+              </div>
+              <span>Nada agendado</span>
             </div>
-            <div class="cal-legend-item">
-              <div class="cal-legend-badge" style="background: #dbeafe; border: 1.5px solid #60a5fa;"></div>
-              <span>Azul: Parcialmente agendado</span>
+            <div class="cal-legend-item" role="listitem">
+              <div class="cal-legend-badge badge-parcial" aria-hidden="true">
+                ${iconCircleHalf()}
+              </div>
+              <span>Parcialmente lleno</span>
             </div>
-            <div class="cal-legend-item">
-              <div class="cal-legend-badge" style="background: #dcfce7; border: 1.5px solid #4ade80;"></div>
-              <span>Verde: Todo agendado</span>
+            <div class="cal-legend-item" role="listitem">
+              <div class="cal-legend-badge badge-todo" aria-hidden="true">
+                ${iconCheckCircleFill()}
+              </div>
+              <span>Todo agendado</span>
             </div>
-            <div class="cal-legend-item">
-              <div class="cal-legend-badge" style="background: #f1f4f0; border: 1.5px solid #d1dcd0;"></div>
-              <span>Gris: Bloqueado / Descanso</span>
+            <div class="cal-legend-item" role="listitem">
+              <div class="cal-legend-badge badge-bloqueado" aria-hidden="true">
+                ${iconSlashCircle()}
+              </div>
+              <span>Bloqueado</span>
             </div>
-            <div class="cal-legend-item">
-              <div class="cal-legend-badge circle" style="background: #e2eae0; border: 2px solid var(--text-main);"></div>
-              <span>Círculo: Día de hoy</span>
+            <div class="cal-legend-item" role="listitem">
+              <div class="cal-legend-badge badge-hoy circle" aria-hidden="true"></div>
+              <span>Hoy</span>
             </div>
           </div>
         </div>
@@ -85,7 +110,7 @@ export default class CalendarView {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
             <h3 id="dayDetailsTitle" style="font-size: 1.25rem; margin: 0;">Citas del día</h3>
             <a id="btnAgendarDia" href="#new-cita" class="btn btn-add" style="width: auto; padding: 8px 14px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-              <span>+ Agendar Cita</span>
+              ${iconPlusCircleFill('icon-btn')} <span>Agendar Cita</span>
             </a>
           </div>
           <div id="dayDetailsList" class="card" style="padding: 16px;"></div>
@@ -96,7 +121,9 @@ export default class CalendarView {
 
   /**
    * Enlaza eventos y carga los datos iniciales al montar la vista.
+   *
    * @param {Object} [queryParams={}] Parámetros de la URL
+   * @returns {Promise<void>}
    */
   async mount(queryParams = {}) {
     this.btnPrev = document.getElementById('btnPrevMonth');
@@ -122,8 +149,9 @@ export default class CalendarView {
   }
 
   /**
-   * Cambia el mes actual hacia atrás o adelante.
-   * @param {number} offset Desplazamiento (-1 o 1)
+   * Cambia el mes actual hacia atrás o adelante y recarga la cuadrícula.
+   *
+   * @param {number} offset Desplazamiento (-1 para mes anterior, 1 para siguiente)
    */
   changeMonth(offset) {
     const [year, month] = this.currentMonth.split('-').map(Number);
@@ -134,7 +162,10 @@ export default class CalendarView {
 
   /**
    * Carga los datos de disponibilidad mensual desde la API.
+   * Incluye Cache-Control: no-store para evitar caché agresivo en móviles.
+   *
    * @param {string} mesStr Mes en formato YYYY-MM
+   * @returns {Promise<void>}
    */
   async loadMonth(mesStr) {
     const [year, month] = mesStr.split('-').map(Number);
@@ -162,9 +193,35 @@ export default class CalendarView {
   }
 
   /**
+   * Devuelve el icono SVG correspondiente al nivel de ocupación de un día.
+   * Los iconos son el diferenciador PRIMARIO para accesibilidad daltónica.
+   *
+   * @param {string} nivelOcupacion - Nivel de ocupación del día ('nada agendado', 'parcial', etc.)
+   * @returns {string} Markup SVG del icono
+   */
+  getStatusIcon(nivelOcupacion) {
+    switch (nivelOcupacion) {
+      case 'nada agendado':
+        return iconCircle('cal-status-icon');
+      case 'parcial':
+        return iconCircleHalf('cal-status-icon');
+      case 'todo agendado':
+        return iconCheckCircleFill('cal-status-icon');
+      case 'bloqueado':
+        return iconSlashCircle('cal-status-icon');
+      case 'no laboral':
+        return iconSlashCircle('cal-status-icon');
+      default:
+        return '';
+    }
+  }
+
+  /**
    * Renderiza la cuadrícula de días con adaptación dinámica de columnas.
    * Si ningún domingo tiene citas, omite domingos (6 columnas Lu-Sá).
    * Si al menos un domingo tiene citas agendadas, incluye domingos (7 columnas Lu-Do).
+   *
+   * Cada celda incluye: número de día + icono de estado (para daltonismo).
    *
    * @param {Array<Object>} daysData Datos de días del mes
    * @param {number} year Año
@@ -257,6 +314,9 @@ export default class CalendarView {
 
       const ariaLabel = `${dayNum} de ${this.monthTitle.textContent}, ${dia.nivel_ocupacion}, ${dia.total_citas || 0} citas`;
 
+      // Icono de estado: diferenciador primario para daltonismo
+      const statusIcon = this.getStatusIcon(dia.nivel_ocupacion);
+
       html += `
         <div class="${classes}"
              data-fecha="${dia.fecha}"
@@ -265,6 +325,7 @@ export default class CalendarView {
              tabindex="0"
              aria-label="${ariaLabel}">
           <span>${dayNum}</span>
+          ${statusIcon}
         </div>
       `;
     });
@@ -288,6 +349,7 @@ export default class CalendarView {
   /**
    * Gestiona la selección interactiva de un día.
    * Actualiza los resaltados de selección manteniendo la forma circular en el día actual.
+   *
    * @param {string} fecha Fecha en formato YYYY-MM-DD
    */
   selectDay(fecha) {
@@ -306,8 +368,78 @@ export default class CalendarView {
   }
 
   /**
+   * Retorna el markup HTML de una tarjeta de cita con icono y badge de estado accesibles.
+   * El icono es el diferenciador primario (no el color) para usuarios daltónicos.
+   *
+   * @param {Object} cita - Datos de la cita
+   * @param {string} cita.estado - Estado: 'confirmada' | 'pendiente' | 'cancelada'
+   * @param {string} cita.hora_inicio - Hora de inicio (HH:MM:SS)
+   * @param {string} cita.hora_fin - Hora de fin (HH:MM:SS)
+   * @param {string} cita.cliente_nombre - Nombre del cliente
+   * @param {string} cita.servicio_nombre - Nombre del servicio
+   * @param {number} cita.cita_id - ID de la cita
+   * @returns {string} Markup HTML de la tarjeta
+   */
+  renderCitaCard(cita) {
+    // Mapear estado a: clase CSS, icono SVG, color variable
+    const estadoConfig = {
+      confirmada: {
+        cardClass: 'cita-confirmada',
+        badgeClass: 'badge-confirmada',
+        icon: iconCheckCircleFill(),
+        label: 'Confirmada'
+      },
+      pendiente: {
+        cardClass: 'cita-pendiente',
+        badgeClass: 'badge-pendiente',
+        icon: iconExclamationTriangleFill(),
+        label: 'Pendiente'
+      },
+      cancelada: {
+        cardClass: 'cita-cancelada',
+        badgeClass: 'badge-cancelada',
+        icon: iconXCircleFill(),
+        label: 'Cancelada'
+      }
+    };
+
+    const config = estadoConfig[cita.estado] || {
+      cardClass: '',
+      badgeClass: '',
+      icon: '',
+      label: cita.estado
+    };
+
+    return `
+      <div class="cita-card ${config.cardClass}">
+        <div style="flex: 1; min-width: 180px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <strong style="color: var(--text-main); font-size: 1rem;">
+              ${cita.hora_inicio.substring(0, 5)} - ${cita.hora_fin.substring(0, 5)}
+            </strong>
+            <span class="estado-badge ${config.badgeClass}" aria-label="Estado: ${config.label}">
+              ${config.icon} ${config.label}
+            </span>
+          </div>
+          <div style="margin-top: 4px; font-size: 0.95rem; color: var(--text-main); font-weight: 600;">${cita.cliente_nombre}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">${cita.servicio_nombre}</div>
+        </div>
+        
+        <div>
+          <a href="#solicitud?id=${cita.cita_id || cita.id}" class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">
+            Ver Detalle
+          </a>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
    * Carga y muestra los detalles y citas del día seleccionado.
+   * Usa Cache-Control: no-store en ApiService para evitar caché en móviles.
+   *
    * @param {string} fecha Fecha en formato YYYY-MM-DD
+   * @returns {Promise<void>}
    */
   async loadDayDetails(fecha) {
     this.detailsContainer.style.display = 'block';
@@ -340,33 +472,9 @@ export default class CalendarView {
         return;
       }
 
-      let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-      citas.forEach(cita => {
-        let statusColor = 'var(--text-muted)';
-        if (cita.estado === 'confirmada') statusColor = 'var(--primary)';
-        if (cita.estado === 'pendiente') statusColor = 'var(--accent)';
-        if (cita.estado === 'cancelada') statusColor = 'var(--danger)';
-
-        html += `
-          <div style="border-left: 4px solid ${statusColor}; padding: 12px; background: var(--bg-card-subtle); border-radius: 0 8px 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 180px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <strong style="color: var(--text-main); font-size: 1rem;">${cita.hora_inicio.substring(0, 5)} - ${cita.hora_fin.substring(0, 5)}</strong>
-                <span style="font-size: 0.75rem; text-transform: uppercase; color: ${statusColor}; font-weight: 700; background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px;">${cita.estado}</span>
-              </div>
-              <div style="margin-top: 4px; font-size: 0.95rem; color: var(--text-main); font-weight: 600;">${cita.cliente_nombre}</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">${cita.servicio_nombre}</div>
-            </div>
-            
-            <div>
-              <a href="#solicitud?id=${cita.cita_id || cita.id}" class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem; text-decoration: none;">
-                Ver Detalle
-              </a>
-            </div>
-          </div>
-        `;
-      });
-      html += '</div>';
+      const html = '<div style="display: flex; flex-direction: column; gap: 12px;">'
+        + citas.map(cita => this.renderCitaCard(cita)).join('')
+        + '</div>';
 
       this.detailsList.innerHTML = html;
 

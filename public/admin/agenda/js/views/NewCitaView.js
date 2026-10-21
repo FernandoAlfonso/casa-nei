@@ -1,6 +1,28 @@
-import ApiService from '../services/api.js';
+/**
+ * Casa Nei - Vista de Nueva Cita (Admin)
+ *
+ * Accesibilidad para daltonismo:
+ *  - Asterisco de campo requerido usa clase `.required-star` (azul oscuro, no rojo)
+ *  - Botón de submit usa icono SVG de check
+ *  - Botón cancelar usa icono SVG de flecha
+ *
+ * @module views/NewCitaView
+ */
 
+import ApiService from '../services/api.js';
+import { iconCheckCircleFill, iconArrowLeft } from '../icons.js';
+
+/**
+ * Vista para agendar una nueva cita directamente desde el panel de administración.
+ * Carga el catálogo de servicios y envía el formulario a la API.
+ */
 export default class NewCitaView {
+  /**
+   * Renderiza el markup HTML del formulario de nueva cita.
+   * Usa .required-star (azul) en lugar de color rojo para asteriscos requeridos.
+   *
+   * @returns {string} Markup HTML
+   */
   render() {
     return `
       <div class="fade-in">
@@ -10,16 +32,16 @@ export default class NewCitaView {
             <p style="color: var(--text-muted); font-size: 0.9rem;">Agendar directamente (Admin)</p>
           </div>
           <button class="btn btn-secondary" onclick="window.location.hash='#home'" style="width: auto; padding: 10px 16px;">
-            Cancelar
+            ${iconArrowLeft('icon-btn')} Cancelar
           </button>
         </header>
 
         <div class="card">
           <form id="newCitaForm">
-            <div id="formError" style="display: none; color: var(--danger); background: var(--danger-glow); padding: 12px; border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 16px; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
+            <div id="formError" style="display: none; color: #1d4ed8; background: rgba(219, 234, 254, 0.6); padding: 12px; border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 16px; border: 1px solid rgba(59, 130, 246, 0.3);"></div>
             
             <div class="form-group">
-              <label class="form-label">Nombre del Paciente <span style="color: var(--danger);">*</span></label>
+              <label class="form-label">Nombre del Paciente <span class="required-star" aria-label="requerido">*</span></label>
               <input type="text" id="nc_nombre" class="form-input" required>
             </div>
 
@@ -30,20 +52,20 @@ export default class NewCitaView {
             </div>
 
             <div class="form-group">
-              <label class="form-label">Servicio <span style="color: var(--danger);">*</span></label>
+              <label class="form-label">Servicio <span class="required-star" aria-label="requerido">*</span></label>
               <select id="nc_servicio" class="form-input" required>
                 <option value="">Cargando servicios...</option>
               </select>
             </div>
 
-            <div style="display: flex; gap: 16px;">
-              <div class="form-group" style="flex: 1;">
-                <label class="form-label">Fecha <span style="color: var(--danger);">*</span></label>
-                <input type="date" id="nc_fecha" class="form-input" required>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <div class="form-group" style="flex: 1; min-width: 0;">
+                <label class="form-label">Fecha <span class="required-star" aria-label="requerido">*</span></label>
+                <input type="date" id="nc_fecha" class="form-input" required style="min-width: 0;">
               </div>
-              <div class="form-group" style="flex: 1;">
-                <label class="form-label">Hora Inicio <span style="color: var(--danger);">*</span></label>
-                <input type="time" id="nc_hora" class="form-input" required>
+              <div class="form-group" style="flex: 1; min-width: 0;">
+                <label class="form-label">Hora Inicio <span class="required-star" aria-label="requerido">*</span></label>
+                <input type="time" id="nc_hora" class="form-input" required style="min-width: 0;">
               </div>
             </div>
 
@@ -52,13 +74,23 @@ export default class NewCitaView {
               <textarea id="nc_notas" class="form-input" rows="2" placeholder="Motivo de consulta o comentarios extra"></textarea>
             </div>
 
-            <button type="submit" id="btnSubmitNC" class="btn btn-add">Agendar Cita</button>
+            <button type="submit" id="btnSubmitNC" class="btn btn-add">
+              ${iconCheckCircleFill('icon-btn')} Agendar Cita
+            </button>
           </form>
         </div>
       </div>
     `;
   }
 
+  /**
+   * Monta la vista: aplica fecha pre-seleccionada si viene en URL, carga servicios
+   * y asigna el evento de submit del formulario.
+   *
+   * @param {Object} [params={}] - Parámetros de la URL
+   * @param {string} [params.fecha] - Fecha pre-seleccionada en formato YYYY-MM-DD
+   * @returns {Promise<void>}
+   */
   async mount(params = {}) {
     this.form = document.getElementById('newCitaForm');
     this.errorDiv = document.getElementById('formError');
@@ -78,6 +110,11 @@ export default class NewCitaView {
     });
   }
 
+  /**
+   * Carga el catálogo de servicios desde la API pública.
+   *
+   * @returns {Promise<void>}
+   */
   async loadServicios() {
     try {
       // El endpoint público de servicios para llenar el catálogo
@@ -96,6 +133,12 @@ export default class NewCitaView {
     }
   }
 
+  /**
+   * Procesa el envío del formulario de nueva cita.
+   * Valida, construye el payload y llama al endpoint de admin.
+   *
+   * @returns {Promise<void>}
+   */
   async handleSubmit() {
     const payload = {
       nombre_completo: document.getElementById('nc_nombre').value,
@@ -127,7 +170,7 @@ export default class NewCitaView {
       this.errorDiv.textContent = error.message;
       this.errorDiv.style.display = 'block';
       this.btnSubmit.disabled = false;
-      this.btnSubmit.innerHTML = 'Agendar Cita';
+      this.btnSubmit.innerHTML = `${iconCheckCircleFill('icon-btn')} Agendar Cita`;
       // Smooth scroll up to see error
       this.errorDiv.scrollIntoView({ behavior: 'smooth' });
     }
