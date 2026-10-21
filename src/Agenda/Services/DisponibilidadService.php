@@ -333,22 +333,30 @@ class DisponibilidadService
       $capacidad = $calculo['capacidad'];
       $slotsLibres = $calculo['slots_libres'];
 
-      if ($totalCitas === 0) {
-        $nivelOcupacion = 'nada agendado'; // Amarillo
-        $estado = 'disponible';
+      if (!empty($bloqueosDia) && $slotsLibres === 0 && $totalCitas === 0) {
+        $nivelOcupacion = 'bloqueado';
+        $estado = 'bloqueado';
+        $primerBloqueo = reset($bloqueosDia);
+        $motivo = $primerBloqueo ? ($primerBloqueo->getMotivo() ?: 'Bloqueado') : 'Bloqueado';
       } elseif ($slotsLibres === 0 || $totalCitas >= $capacidad) {
-        $nivelOcupacion = 'todo agendado'; // Verde
+        $nivelOcupacion = 'todo agendado'; // Azul oscuro / lleno
         $estado = 'ocupado';
+        $motivo = 'Sin horarios disponibles';
+      } elseif ($totalCitas === 0) {
+        $nivelOcupacion = 'nada agendado'; // Ámbar
+        $estado = 'disponible';
+        $motivo = null;
       } else {
         $nivelOcupacion = 'parcial'; // Azul (al menos un horario agendado)
         $estado = 'disponible';
+        $motivo = null;
       }
 
       $mesData[] = [
         'fecha' => $fechaStr,
         'dia_semana' => $diaSemana,
         'estado' => $estado,
-        'motivo' => $slotsLibres === 0 ? 'Sin horarios disponibles' : null,
+        'motivo' => $motivo,
         'slots_libres' => $slotsLibres,
         'total_citas' => $totalCitas,
         'capacidad_total' => $capacidad,

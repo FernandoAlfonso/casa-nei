@@ -141,13 +141,31 @@ class BloqueoAgenda
   }
 
   /**
-   * Comprueba si el bloqueo aplica a todo el día de forma completa (sin horario específico).
+   * Comprueba si el bloqueo aplica a todo el día de forma completa (sin horario específico o cubriendo 00:00 a 23:59).
    *
    * @return bool
    */
   public function esDiaCompleto(): bool
   {
-    return $this->horaInicio === null && $this->horaFin === null;
+    if ($this->horaInicio === null && $this->horaFin === null) {
+      return true;
+    }
+
+    $inicio = trim((string) $this->horaInicio);
+    $fin = trim((string) $this->horaFin);
+
+    if ($inicio === '' && $fin === '') {
+      return true;
+    }
+
+    $inicioH = substr($inicio, 0, 5);
+    $finH = substr($fin, 0, 5);
+
+    if ($inicioH === '00:00' && ($finH === '23:59' || $finH === '24:00')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -180,6 +198,7 @@ class BloqueoAgenda
       'hora_inicio' => $this->horaInicio,
       'hora_fin' => $this->horaFin,
       'motivo' => $this->motivo,
+      'es_dia_completo' => $this->esDiaCompleto(),
     ];
   }
 }

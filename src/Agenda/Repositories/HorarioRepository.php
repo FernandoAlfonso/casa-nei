@@ -157,7 +157,7 @@ class HorarioRepository
             WHERE fecha >= CURRENT_DATE()
             ORDER BY fecha ASC, hora_inicio ASC";
     
-    return $this->db->fetchAll($sql);
+    return $this->db->fetchAll($sql, [], fn(array $r) => BloqueoAgenda::fromArray($r)->toArray());
   }
 
   /**

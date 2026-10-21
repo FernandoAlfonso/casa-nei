@@ -181,6 +181,7 @@ export default class CalendarView {
     try {
       const response = await ApiService.get(`/admin/calendario-mensual?mes=${mesStr}`);
       const data = response.data || [];
+      this.monthDataMap = new Map(data.map(dia => [dia.fecha, dia]));
       this.renderGrid(data, year, month);
 
       // Si el día seleccionado está en el mes actual, abrir automáticamente sus detalles
@@ -459,20 +460,44 @@ export default class CalendarView {
     this.detailsList.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
 
     try {
+      const dayInfo = this.monthDataMap ? this.monthDataMap.get(fecha) : null;
+      const isBloqueado = dayInfo && (dayInfo.nivel_ocupacion === 'bloqueado' || dayInfo.estado === 'bloqueado');
+
+      let bannerBloqueoHtml = '';
+      if (isBloqueado) {
+        bannerBloqueoHtml = `
+          <div style="background: var(--cal-bloqueado-bg); border: 1px solid var(--cal-bloqueado-border); border-left: 4px solid var(--btn-orange-bg); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 10px;">
+            <span style="color: var(--cal-bloqueado-text); display: flex; flex-shrink: 0; margin-top: 2px;">${iconSlashCircle()}</span>
+            <div>
+              <strong style="color: var(--text-main); font-size: 0.95rem;">Día Bloqueado</strong>
+              <p style="margin: 2px 0 0; font-size: 0.85rem; color: var(--text-muted);">${dayInfo.motivo ? 'Motivo: ' + dayInfo.motivo : 'Este día está bloqueado para reservaciones en línea.'}</p>
+            </div>
+          </div>
+        `;
+      }
+
       const response = await ApiService.get(`/admin/citas?fecha=${fecha}`);
       const citas = response.data || [];
 
       if (citas.length === 0) {
-        this.detailsList.innerHTML = `
-          <div style="text-align: center; padding: 20px 0; color: var(--text-muted);">
-            <p style="margin-bottom: 8px;">No hay citas registradas para este día.</p>
-            <p style="font-size: 0.85rem; color: var(--text-subtle);">Usa el botón "+ Agendar Cita" para programar una atención.</p>
-          </div>
-        `;
+        if (isBloqueado) {
+          this.detailsList.innerHTML = bannerBloqueoHtml + `
+            <div style="text-align: center; padding: 16px 0; color: var(--text-muted);">
+              <p style="margin: 0; font-size: 0.9rem;">No hay citas agendadas para este día bloqueado.</p>
+            </div>
+          `;
+        } else {
+          this.detailsList.innerHTML = `
+            <div style="text-align: center; padding: 20px 0; color: var(--text-muted);">
+              <p style="margin-bottom: 8px;">No hay citas registradas para este día.</p>
+              <p style="font-size: 0.85rem; color: var(--text-subtle);">Usa el botón "+ Agendar Cita" para programar una atención.</p>
+            </div>
+          `;
+        }
         return;
       }
 
-      const html = '<div style="display: flex; flex-direction: column; gap: 12px;">'
+      const html = bannerBloqueoHtml + '<div style="display: flex; flex-direction: column; gap: 12px;">'
         + citas.map(cita => this.renderCitaCard(cita)).join('')
         + '</div>';
 
