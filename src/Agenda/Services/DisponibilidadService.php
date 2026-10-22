@@ -2,7 +2,9 @@
 
 namespace App\Agenda\Services;
 
+use App\Agenda\Entities\BloqueoAgenda;
 use App\Agenda\Entities\EstadoCita;
+use App\Agenda\Entities\HorarioAtencion;
 use App\Agenda\Repositories\CitaRepository;
 use App\Agenda\Repositories\HorarioRepository;
 use App\Agenda\Repositories\ServicioRepository;
@@ -86,35 +88,12 @@ class DisponibilidadService
     $fechaInicioStr = $inicio->format('Y-m-d');
     $fechaFinStr = $fin->format('Y-m-d');
 
-    // Cargar horarios semanales, bloqueos y citas en el rango
-    $horariosSemanales = [];
-    foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
-      $horariosSemanales[$h->getDiaSemana()][] = $h;
-    }
+    $datos = $this->cargarDatosRango($fechaInicioStr, $fechaFinStr);
+    $horariosSemanales = $datos['horarios_semanales'];
+    $bloqueosPorFecha = $datos['bloqueos_por_fecha'];
+    $citasPorFecha = $datos['citas_por_fecha'];
 
-    $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
-    $bloqueosPorFecha = [];
-    foreach ($bloqueos as $b) {
-      $bloqueosPorFecha[$b->getFecha()][] = $b;
-    }
-
-    $citas = $this->citaRepo->obtenerPorRangoFechas($fechaInicioStr, $fechaFinStr, [
-      EstadoCita::PENDIENTE->value,
-      EstadoCita::CONFIRMADA->value
-    ]);
-    $citasPorFecha = [];
-    foreach ($citas as $c) {
-      $citasPorFecha[$c->getFechaCita()][] = $c;
-    }
-
-    // Duración base en minutos para calcular capacidad (por defecto 60 min si no se pasa servicio)
-    $duracionMinutos = 60;
-    if ($servicioId !== null) {
-      $servicio = $this->servicioRepo->buscarPorId($servicioId);
-      if ($servicio) {
-        $duracionMinutos = $servicio->getDuracionMinutos();
-      }
-    }
+    $duracionMinutos = $this->resolverDuracionServicio($servicioId);
 
     $periodo = new DatePeriod($inicio, new DateInterval('P1D'), (clone $fin)->modify('+1 day'));
     $calendario = [];
@@ -125,48 +104,39 @@ class DisponibilidadService
 
       // 1. Validar si el centro abre ese día de la semana
       if (!isset($horariosSemanales[$diaSemana])) {
-        $diaData = [
-          'fecha' => $fechaStr,
-          'dia_semana' => $diaSemana,
-          'estado' => 'cerrado',
-          'motivo' => 'Día no laboral',
-          'slots_libres' => 0,
-          'tiene_pendientes' => false
-        ];
-        if ($conSlots) {
-          $diaData['slots'] = [];
-        }
-        $calendario[$fechaStr] = $diaData;
+        $calendario[$fechaStr] = $this->construirDatosDia(
+          $fechaStr,
+          $diaSemana,
+          'cerrado',
+          'Día no laboral',
+          0,
+          false,
+          $conSlots,
+          []
+        );
         continue;
       }
 
       $horariosDia = $horariosSemanales[$diaSemana];
+      $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
+      $bloqueoCompleto = $this->buscarBloqueoCompleto($bloqueosDia);
 
       // 2. Validar si hay un bloqueo total de todo el día
-      $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
-      $bloqueoCompleto = null;
-      foreach ($bloqueosDia as $b) {
-        if ($b->esDiaCompleto()) {
-          $bloqueoCompleto = $b;
-          break;
-        }
-      }
-
       if ($bloqueoCompleto !== null) {
-        $diaData = [
-          'fecha' => $fechaStr,
-          'dia_semana' => $diaSemana,
-          'estado' => 'bloqueado',
-          'motivo' => $bloqueoCompleto->getMotivo() ?? 'No disponible',
-          'slots_libres' => 0,
-          'tiene_pendientes' => false
-        ];
-        if ($conSlots) {
-          $diaData['slots'] = [];
-        }
-        $calendario[$fechaStr] = $diaData;
+        $calendario[$fechaStr] = $this->construirDatosDia(
+          $fechaStr,
+          $diaSemana,
+          'bloqueado',
+          $bloqueoCompleto->getMotivo() ?? 'No disponible',
+          0,
+          false,
+          $conSlots,
+          []
+        );
         continue;
       }
+
+      $citasDia = $citasPorFecha[$fechaStr] ?? [];
 
       // 3. Calcular slots libres del día
       $slots = [];
@@ -177,36 +147,25 @@ class DisponibilidadService
           $turno->getHoraFin(),
           $duracionMinutos,
           $bloqueosDia,
-          $citasPorFecha[$fechaStr] ?? []
+          $citasDia
         );
         $slots = array_merge($slots, $slotsTurno);
       }
 
-      $citasDia = $citasPorFecha[$fechaStr] ?? [];
-      $tienePendientes = false;
-      foreach ($citasDia as $c) {
-        if ($c->estaPendiente()) {
-          $tienePendientes = true;
-          break;
-        }
-      }
-
+      $tienePendientes = $this->hayPendientes($citasDia);
       $estado = count($slots) > 0 ? 'disponible' : 'ocupado';
+      $motivo = count($slots) === 0 ? 'Sin horarios disponibles' : null;
 
-      $diaData = [
-        'fecha' => $fechaStr,
-        'dia_semana' => $diaSemana,
-        'estado' => $estado,
-        'motivo' => count($slots) === 0 ? 'Sin horarios disponibles' : null,
-        'slots_libres' => count($slots),
-        'tiene_pendientes' => $tienePendientes
-      ];
-
-      if ($conSlots) {
-        $diaData['slots'] = $slots;
-      }
-
-      $calendario[$fechaStr] = $diaData;
+      $calendario[$fechaStr] = $this->construirDatosDia(
+        $fechaStr,
+        $diaSemana,
+        $estado,
+        $motivo,
+        count($slots),
+        $tienePendientes,
+        $conSlots,
+        $slots
+      );
     }
 
     return $calendario;
@@ -216,7 +175,7 @@ class DisponibilidadService
    * Obtiene la disponibilidad resumida para todo un mes, ideal para la vista minimalista administrativa.
    *
    * @param string $mes Formato YYYY-MM
-   * @return array
+   * @return array<int, array<string, mixed>>
    */
   public function obtenerCalendarioMensual(string $mes): array
   {
@@ -227,28 +186,10 @@ class DisponibilidadService
     $fechaInicioStr = $inicioMes->format('Y-m-d');
     $fechaFinStr = $finMes->format('Y-m-d');
 
-    // 1. Cargar turnos semanales
-    $horariosSemanales = [];
-    foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
-      $horariosSemanales[$h->getDiaSemana()][] = $h;
-    }
-
-    // 2. Cargar bloqueos en el mes
-    $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
-    $bloqueosPorFecha = [];
-    foreach ($bloqueos as $b) {
-      $bloqueosPorFecha[$b->getFecha()][] = $b;
-    }
-
-    // 3. Cargar citas en el mes (pendientes y confirmadas)
-    $citas = $this->citaRepo->obtenerPorRangoFechas($fechaInicioStr, $fechaFinStr, [
-      EstadoCita::PENDIENTE->value,
-      EstadoCita::CONFIRMADA->value
-    ]);
-    $citasPorFecha = [];
-    foreach ($citas as $c) {
-      $citasPorFecha[$c->getFechaCita()][] = $c;
-    }
+    $datos = $this->cargarDatosRango($fechaInicioStr, $fechaFinStr);
+    $horariosSemanales = $datos['horarios_semanales'];
+    $bloqueosPorFecha = $datos['bloqueos_por_fecha'];
+    $citasPorFecha = $datos['citas_por_fecha'];
 
     $periodo = new DatePeriod($inicioMes, new DateInterval('P1D'), (clone $finMes)->modify('+1 day'));
     $mesData = [];
@@ -259,24 +200,10 @@ class DisponibilidadService
       $citasDia = $citasPorFecha[$fechaStr] ?? [];
       $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
       $totalCitas = count($citasDia);
-
-      $tienePendientes = false;
-      foreach ($citasDia as $c) {
-        if ($c->estaPendiente()) {
-          $tienePendientes = true;
-          break;
-        }
-      }
+      $tienePendientes = $this->hayPendientes($citasDia);
 
       // Validar si hay bloqueo de día completo
-      $bloqueoCompleto = null;
-      foreach ($bloqueosDia as $b) {
-        if ($b->esDiaCompleto()) {
-          $bloqueoCompleto = $b;
-          break;
-        }
-      }
-
+      $bloqueoCompleto = $this->buscarBloqueoCompleto($bloqueosDia);
       if ($bloqueoCompleto !== null) {
         $mesData[] = [
           'fecha' => $fechaStr,
@@ -333,35 +260,18 @@ class DisponibilidadService
       $capacidad = $calculo['capacidad'];
       $slotsLibres = $calculo['slots_libres'];
 
-      if (!empty($bloqueosDia) && $slotsLibres === 0 && $totalCitas === 0) {
-        $nivelOcupacion = 'bloqueado';
-        $estado = 'bloqueado';
-        $primerBloqueo = reset($bloqueosDia);
-        $motivo = $primerBloqueo ? ($primerBloqueo->getMotivo() ?: 'Bloqueado') : 'Bloqueado';
-      } elseif ($slotsLibres === 0 || $totalCitas >= $capacidad) {
-        $nivelOcupacion = 'todo agendado'; // Azul oscuro / lleno
-        $estado = 'ocupado';
-        $motivo = 'Sin horarios disponibles';
-      } elseif ($totalCitas === 0) {
-        $nivelOcupacion = 'nada agendado'; // Ámbar
-        $estado = 'disponible';
-        $motivo = null;
-      } else {
-        $nivelOcupacion = 'parcial'; // Azul (al menos un horario agendado)
-        $estado = 'disponible';
-        $motivo = null;
-      }
+      $ocupacion = $this->determinarOcupacionDiaAdmin($capacidad, $slotsLibres, $totalCitas, $bloqueosDia);
 
       $mesData[] = [
         'fecha' => $fechaStr,
         'dia_semana' => $diaSemana,
-        'estado' => $estado,
-        'motivo' => $motivo,
+        'estado' => $ocupacion['estado'],
+        'motivo' => $ocupacion['motivo'],
         'slots_libres' => $slotsLibres,
         'total_citas' => $totalCitas,
         'capacidad_total' => $capacidad,
         'tiene_pendientes' => $tienePendientes,
-        'nivel_ocupacion' => $nivelOcupacion
+        'nivel_ocupacion' => $ocupacion['nivel_ocupacion']
       ];
     }
 
@@ -386,21 +296,7 @@ class DisponibilidadService
     bool $conSlots = false
   ): array {
     $inicio = new DateTime($fechaDesde ?? 'today');
-
-    // Duración base del servicio
-    $duracionMinutos = 60;
-    if ($servicioId !== null) {
-      $servicio = $this->servicioRepo->buscarPorId($servicioId);
-      if ($servicio) {
-        $duracionMinutos = $servicio->getDuracionMinutos();
-      }
-    }
-
-    // Cargar horarios semanales configurados (Lunes a Sábado)
-    $horariosSemanales = [];
-    foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
-      $horariosSemanales[$h->getDiaSemana()][] = $h;
-    }
+    $duracionMinutos = $this->resolverDuracionServicio($servicioId);
 
     $diasEncontrados = [];
     $cursor = clone $inicio;
@@ -420,21 +316,10 @@ class DisponibilidadService
       $fechaInicioStr = $cursor->format('Y-m-d');
       $fechaFinStr = $finBloque->format('Y-m-d');
 
-      // Consultar bloqueos y citas en el rango del bloque
-      $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
-      $bloqueosPorFecha = [];
-      foreach ($bloqueos as $b) {
-        $bloqueosPorFecha[$b->getFecha()][] = $b;
-      }
-
-      $citas = $this->citaRepo->obtenerPorRangoFechas($fechaInicioStr, $fechaFinStr, [
-        EstadoCita::PENDIENTE->value,
-        EstadoCita::CONFIRMADA->value
-      ]);
-      $citasPorFecha = [];
-      foreach ($citas as $c) {
-        $citasPorFecha[$c->getFechaCita()][] = $c;
-      }
+      $datos = $this->cargarDatosRango($fechaInicioStr, $fechaFinStr);
+      $horariosSemanales = $datos['horarios_semanales'];
+      $bloqueosPorFecha = $datos['bloqueos_por_fecha'];
+      $citasPorFecha = $datos['citas_por_fecha'];
 
       $periodo = new DatePeriod($cursor, new DateInterval('P1D'), (clone $finBloque)->modify('+1 day'));
 
@@ -448,19 +333,14 @@ class DisponibilidadService
         }
 
         $horariosDia = $horariosSemanales[$diaSemana];
+        $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
 
         // 2. Omitir si hay un bloqueo de día completo (ej. festivos, vacaciones)
-        $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
-        $bloqueoCompleto = false;
-        foreach ($bloqueosDia as $b) {
-          if ($b->esDiaCompleto()) {
-            $bloqueoCompleto = true;
-            break;
-          }
-        }
-        if ($bloqueoCompleto) {
+        if ($this->buscarBloqueoCompleto($bloqueosDia) !== null) {
           continue;
         }
+
+        $citasDia = $citasPorFecha[$fechaStr] ?? [];
 
         // 3. Generar slots de horarios disponibles para este día
         $slots = [];
@@ -471,36 +351,25 @@ class DisponibilidadService
             $turno->getHoraFin(),
             $duracionMinutos,
             $bloqueosDia,
-            $citasPorFecha[$fechaStr] ?? []
+            $citasDia
           );
           $slots = array_merge($slots, $slotsTurno);
         }
 
         // Si tiene al menos 1 horario libre, lo agregamos como día disponible garantizado
         if (count($slots) > 0) {
-          $citasDia = $citasPorFecha[$fechaStr] ?? [];
-          $tienePendientes = false;
-          foreach ($citasDia as $c) {
-            if ($c->estaPendiente()) {
-              $tienePendientes = true;
-              break;
-            }
-          }
+          $tienePendientes = $this->hayPendientes($citasDia);
 
-          $diaItem = [
-            'fecha' => $fechaStr,
-            'dia_semana' => $diaSemana,
-            'estado' => 'disponible',
-            'motivo' => null,
-            'slots_libres' => count($slots),
-            'tiene_pendientes' => $tienePendientes
-          ];
-
-          if ($conSlots) {
-            $diaItem['slots'] = $slots;
-          }
-
-          $diasEncontrados[] = $diaItem;
+          $diasEncontrados[] = $this->construirDatosDia(
+            $fechaStr,
+            $diaSemana,
+            'disponible',
+            null,
+            count($slots),
+            $tienePendientes,
+            $conSlots,
+            $slots
+          );
 
           if (count($diasEncontrados) >= $cantidadDias) {
             break 2; // Salir de ambos bucles al completar la cuota de días
@@ -538,10 +407,8 @@ class DisponibilidadService
     }
 
     $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fecha, $fecha);
-    foreach ($bloqueos as $b) {
-      if ($b->esDiaCompleto()) {
-        return [];
-      }
+    if ($this->buscarBloqueoCompleto($bloqueos) !== null) {
+      return [];
     }
 
     $citas = $this->citaRepo->obtenerPorRangoFechas($fecha, $fecha, [
@@ -565,6 +432,200 @@ class DisponibilidadService
   }
 
   /**
+   * Carga y organiza por fecha/día los horarios semanales, bloqueos y citas activas en un rango.
+   *
+   * @param string $fechaInicioStr Fecha inicial en formato YYYY-MM-DD.
+   * @param string $fechaFinStr Fecha final en formato YYYY-MM-DD.
+   * @return array{
+   *   horarios_semanales: array<int, array<int, HorarioAtencion>>,
+   *   bloqueos_por_fecha: array<string, array<int, BloqueoAgenda>>,
+   *   citas_por_fecha: array<string, array<int, \App\Agenda\Entities\Cita>>
+   * }
+   */
+  private function cargarDatosRango(string $fechaInicioStr, string $fechaFinStr): array
+  {
+    $horariosSemanales = [];
+    foreach ($this->horarioRepo->obtenerHorariosSemanales() as $h) {
+      $horariosSemanales[$h->getDiaSemana()][] = $h;
+    }
+
+    $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fechaInicioStr, $fechaFinStr);
+    $bloqueosPorFecha = [];
+    foreach ($bloqueos as $b) {
+      $bloqueosPorFecha[$b->getFecha()][] = $b;
+    }
+
+    $citas = $this->citaRepo->obtenerPorRangoFechas($fechaInicioStr, $fechaFinStr, [
+      EstadoCita::PENDIENTE->value,
+      EstadoCita::CONFIRMADA->value
+    ]);
+    $citasPorFecha = [];
+    foreach ($citas as $c) {
+      $citasPorFecha[$c->getFechaCita()][] = $c;
+    }
+
+    return [
+      'horarios_semanales' => $horariosSemanales,
+      'bloqueos_por_fecha' => $bloqueosPorFecha,
+      'citas_por_fecha' => $citasPorFecha
+    ];
+  }
+
+  /**
+   * Busca si existe un bloqueo de día completo dentro de la lista de bloqueos del día.
+   *
+   * @param array<int, BloqueoAgenda> $bloqueosDia Lista de bloqueos correspondientes al día.
+   * @return BloqueoAgenda|null Bloqueo encontrado o null si no existe bloqueo total.
+   */
+  private function buscarBloqueoCompleto(array $bloqueosDia): ?BloqueoAgenda
+  {
+    foreach ($bloqueosDia as $b) {
+      if ($b->esDiaCompleto()) {
+        return $b;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Verifica si alguna de las citas del día se encuentra en estado pendiente.
+   *
+   * @param array<int, \App\Agenda\Entities\Cita> $citasDia Lista de citas del día.
+   * @return bool True si al menos una cita está pendiente de confirmación.
+   */
+  private function hayPendientes(array $citasDia): bool
+  {
+    foreach ($citasDia as $c) {
+      if ($c->estaPendiente()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Resuelve la duración en minutos según el servicio proporcionado, con valor predeterminado de 60 minutos.
+   *
+   * @param int|null $servicioId ID opcional del servicio.
+   * @return int Duración en minutos calculada.
+   */
+  private function resolverDuracionServicio(?int $servicioId): int
+  {
+    if ($servicioId !== null) {
+      $servicio = $this->servicioRepo->buscarPorId($servicioId);
+      if ($servicio) {
+        return $servicio->getDuracionMinutos();
+      }
+    }
+    return 60;
+  }
+
+  /**
+   * Ensambla el array estándar representativo de la información de disponibilidad de un día.
+   *
+   * @param string $fecha Fecha en formato YYYY-MM-DD.
+   * @param int $diaSemana Día de la semana (0=Domingo, 1=Lunes, etc.).
+   * @param string $estado Estado del día ('disponible', 'ocupado', 'bloqueado', 'cerrado').
+   * @param string|null $motivo Motivo descriptivo del estado cuando aplica.
+   * @param int $slotsLibres Cantidad de slots libres disponibles.
+   * @param bool $tienePendientes Si existen citas pendientes asociadas al día.
+   * @param bool $conSlots Si se deben incrustar los slots horarios en la respuesta.
+   * @param array<int, array<string, string>> $slots Lista de slots calculados.
+   * @return array<string, mixed>
+   */
+  private function construirDatosDia(
+    string $fecha,
+    int $diaSemana,
+    string $estado,
+    ?string $motivo,
+    int $slotsLibres,
+    bool $tienePendientes,
+    bool $conSlots = false,
+    array $slots = []
+  ): array {
+    $diaData = [
+      'fecha' => $fecha,
+      'dia_semana' => $diaSemana,
+      'estado' => $estado,
+      'motivo' => $motivo,
+      'slots_libres' => $slotsLibres,
+      'tiene_pendientes' => $tienePendientes
+    ];
+
+    if ($conSlots) {
+      $diaData['slots'] = $slots;
+    }
+
+    return $diaData;
+  }
+
+  /**
+   * Determina el estado, motivo y nivel de ocupación para un día laboral regular en vista administrativa.
+   *
+   * @param int $capacidad Capacidad total teórica de slots del día.
+   * @param int $slotsLibres Cantidad de slots libres remanentes.
+   * @param int $totalCitas Total de citas activas agendadas en el día.
+   * @param array<int, BloqueoAgenda> $bloqueosDia Lista de bloqueos del día.
+   * @return array{estado: string, motivo: string|null, nivel_ocupacion: string}
+   */
+  private function determinarOcupacionDiaAdmin(
+    int $capacidad,
+    int $slotsLibres,
+    int $totalCitas,
+    array $bloqueosDia
+  ): array {
+    if (!empty($bloqueosDia) && $slotsLibres === 0 && $totalCitas === 0) {
+      $primerBloqueo = reset($bloqueosDia);
+      return [
+        'estado' => 'bloqueado',
+        'motivo' => $primerBloqueo ? ($primerBloqueo->getMotivo() ?: 'Bloqueado') : 'Bloqueado',
+        'nivel_ocupacion' => 'bloqueado'
+      ];
+    }
+
+    if ($slotsLibres === 0 || $totalCitas >= $capacidad) {
+      return [
+        'estado' => 'ocupado',
+        'motivo' => 'Sin horarios disponibles',
+        'nivel_ocupacion' => 'todo agendado'
+      ];
+    }
+
+    if ($totalCitas === 0) {
+      return [
+        'estado' => 'disponible',
+        'motivo' => null,
+        'nivel_ocupacion' => 'nada agendado'
+      ];
+    }
+
+    return [
+      'estado' => 'disponible',
+      'motivo' => null,
+      'nivel_ocupacion' => 'parcial'
+    ];
+  }
+
+  /**
+   * Calcula la capacidad total teórica de un turno sin considerar bloqueos ni citas.
+   *
+   * @param string $horaInicio Hora de inicio laboral (HH:MM:SS o HH:MM).
+   * @param string $horaFin Hora de fin laboral (HH:MM:SS o HH:MM).
+   * @param int $duracionMinutos Duración base en minutos de cada slot.
+   * @return int Capacidad máxima de slots en el turno.
+   */
+  private function calcularCapacidadTurno(string $horaInicio, string $horaFin, int $duracionMinutos): int
+  {
+    $inicio = new DateTime("1970-01-01 {$horaInicio}");
+    $fin = new DateTime("1970-01-01 {$horaFin}");
+    $minutosTotales = ($fin->getTimestamp() - $inicio->getTimestamp()) / 60;
+    if ($minutosTotales <= 0 || $duracionMinutos <= 0) {
+      return 0;
+    }
+    return (int) floor($minutosTotales / $duracionMinutos);
+  }
+
+  /**
    * Divide el horario laboral en intervalos y descuenta citas y bloqueos existentes.
    * Enriquece cada slot con formatos legibles en 12 horas (AM/PM) para vistas móviles.
    *
@@ -572,8 +633,9 @@ class DisponibilidadService
    * @param string $horaApertura Hora de inicio laboral (HH:MM:SS).
    * @param string $horaCierre Hora de cierre laboral (HH:MM:SS).
    * @param int $duracionMinutos Duración del servicio.
-   * @param array $bloqueos Bloqueos del día.
-   * @param array $citas Citas del día.
+   * @param array<int, BloqueoAgenda> $bloqueos Bloqueos del día.
+   * @param array<int, \App\Agenda\Entities\Cita> $citas Citas del día.
+   * @param bool $incluirPasados Si es true, no descarta horas pasadas ni genera formato AM/PM (modo admin).
    * @return array<int, array<string, string>>
    */
   private function generarSlotsDisponibles(
@@ -582,7 +644,8 @@ class DisponibilidadService
     string $horaCierre,
     int $duracionMinutos,
     array $bloqueos,
-    array $citas
+    array $citas,
+    bool $incluirPasados = false
   ): array {
     $slots = [];
     $actual = new DateTime("{$fecha} {$horaApertura}");
@@ -597,8 +660,8 @@ class DisponibilidadService
         break;
       }
 
-      // Si la fecha es hoy y la hora ya pasó, se descarta
-      if ($actual <= $ahora) {
+      // Si la fecha es hoy y la hora ya pasó, se descarta (solo para clientes públicos)
+      if (!$incluirPasados && $actual <= $ahora) {
         $actual->modify("+{$duracionMinutos} minutes");
         continue;
       }
@@ -634,18 +697,28 @@ class DisponibilidadService
       if (!$colisionCita) {
         $horaInicioCorta = $actual->format('H:i');
         $horaFinCorta = $finSlot->format('H:i');
-        $inicioAmPm = self::formatearHoraAmPm($horaInicioCorta);
-        $finAmPm = self::formatearHoraAmPm($horaFinCorta);
 
-        $slots[] = [
-          'hora_inicio' => $horaInicioCorta,
-          'hora_fin' => $horaFinCorta,
-          'hora_inicio_completa' => $horaInicioStr,
-          'hora_fin_completa' => $horaFinStr,
-          'hora_inicio_formato' => $inicioAmPm,
-          'hora_fin_formato' => $finAmPm,
-          'etiqueta' => "{$inicioAmPm} - {$finAmPm}"
-        ];
+        if ($incluirPasados) {
+          $slots[] = [
+            'hora_inicio' => $horaInicioCorta,
+            'hora_fin' => $horaFinCorta,
+            'hora_inicio_completa' => $horaInicioStr,
+            'hora_fin_completa' => $horaFinStr
+          ];
+        } else {
+          $inicioAmPm = self::formatearHoraAmPm($horaInicioCorta);
+          $finAmPm = self::formatearHoraAmPm($horaFinCorta);
+
+          $slots[] = [
+            'hora_inicio' => $horaInicioCorta,
+            'hora_fin' => $horaFinCorta,
+            'hora_inicio_completa' => $horaInicioStr,
+            'hora_fin_completa' => $horaFinStr,
+            'hora_inicio_formato' => $inicioAmPm,
+            'hora_fin_formato' => $finAmPm,
+            'etiqueta' => "{$inicioAmPm} - {$finAmPm}"
+          ];
+        }
       }
 
       $actual->modify("+{$duracionMinutos} minutes");
@@ -656,12 +729,12 @@ class DisponibilidadService
 
   /**
    * Calcula los slots totales y libres de un día sin descartar horas pasadas,
-   * ideal para evaluar la ocupación real e histórica en el panel administrativo.
+   * delegando en generarSlotsDisponibles con inclusión de pasados para optimizar el panel administrativo.
    *
    * @param string $fecha Formato YYYY-MM-DD
-   * @param array $horariosDia Lista de HorarioAtencion para el día
-   * @param array $bloqueosDia Lista de BloqueoAgenda para el día
-   * @param array $citasDia Lista de Cita para el día
+   * @param array<int, HorarioAtencion> $horariosDia Lista de HorarioAtencion para el día
+   * @param array<int, BloqueoAgenda> $bloqueosDia Lista de BloqueoAgenda para el día
+   * @param array<int, \App\Agenda\Entities\Cita> $citasDia Lista de Cita para el día
    * @param int $duracionMinutos Duración base para los slots
    * @return array{capacidad: int, slots_libres: int}
    */
@@ -672,58 +745,25 @@ class DisponibilidadService
     array $citasDia,
     int $duracionMinutos = 60
   ): array {
-    $totalSlots = 0;
+    $capacidad = 0;
     $slotsLibres = 0;
 
     foreach ($horariosDia as $turno) {
-      $actual = new DateTime("{$fecha} {$turno->getHoraInicio()}");
-      $cierre = new DateTime("{$fecha} {$turno->getHoraFin()}");
-
-      while ($actual < $cierre) {
-        $finSlot = (clone $actual)->modify("+{$duracionMinutos} minutes");
-        if ($finSlot > $cierre) {
-          break;
-        }
-
-        $totalSlots++;
-        $horaInicioStr = $actual->format('H:i:s');
-        $horaFinStr = $finSlot->format('H:i:s');
-
-        // Validar colisión con bloqueos parciales
-        $colisionBloqueo = false;
-        foreach ($bloqueosDia as $bloqueo) {
-          if ($bloqueo->getHoraInicio() && $bloqueo->getHoraFin()) {
-            if ($this->hayTraslape($horaInicioStr, $horaFinStr, $bloqueo->getHoraInicio(), $bloqueo->getHoraFin())) {
-              $colisionBloqueo = true;
-              break;
-            }
-          }
-        }
-
-        if ($colisionBloqueo) {
-          $actual->modify("+{$duracionMinutos} minutes");
-          continue;
-        }
-
-        // Validar colisión con citas agendadas
-        $colisionCita = false;
-        foreach ($citasDia as $cita) {
-          if ($this->hayTraslape($horaInicioStr, $horaFinStr, $cita->getHoraInicio(), $cita->getHoraFin())) {
-            $colisionCita = true;
-            break;
-          }
-        }
-
-        if (!$colisionCita) {
-          $slotsLibres++;
-        }
-
-        $actual->modify("+{$duracionMinutos} minutes");
-      }
+      $capacidad += $this->calcularCapacidadTurno($turno->getHoraInicio(), $turno->getHoraFin(), $duracionMinutos);
+      $slots = $this->generarSlotsDisponibles(
+        $fecha,
+        $turno->getHoraInicio(),
+        $turno->getHoraFin(),
+        $duracionMinutos,
+        $bloqueosDia,
+        $citasDia,
+        true
+      );
+      $slotsLibres += count($slots);
     }
 
     return [
-      'capacidad' => $totalSlots,
+      'capacidad' => $capacidad,
       'slots_libres' => $slotsLibres
     ];
   }

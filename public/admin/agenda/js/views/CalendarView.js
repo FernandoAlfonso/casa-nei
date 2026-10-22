@@ -21,6 +21,18 @@ import {
 } from '../icons.js';
 
 /**
+ * Mapa de clases CSS según nivel de ocupación para diferenciación visual accesible.
+ * @type {Record<string, string>}
+ */
+const STATUS_CLASS_MAP = {
+  'no laboral': 'cal-status-no-laboral',
+  'nada agendado': 'cal-status-nada',
+  'parcial': 'cal-status-parcial',
+  'todo agendado': 'cal-status-todo',
+  'bloqueado': 'cal-status-bloqueado'
+};
+
+/**
  * Clase que gestiona la vista del calendario mensual administrativo.
  * Incluye cuadrícula inteligente (6 o 7 columnas), adaptación para daltonismo
  * y gestión de estado visual para día actual y selección activa.
@@ -218,47 +230,29 @@ export default class CalendarView {
   }
 
   /**
+   * Obtiene la clase CSS asociada al nivel de ocupación de un día.
+   *
+   * @param {string} nivelOcupacion - Nivel de ocupación ('nada agendado', 'parcial', etc.)
+   * @returns {string} Clase CSS correspondiente
+   */
+  getStatusClass(nivelOcupacion) {
+    return STATUS_CLASS_MAP[nivelOcupacion] || 'cal-status-bloqueado';
+  }
+
+  /**
    * Renderiza la cuadrícula de días con adaptación dinámica de columnas.
    * Si ningún domingo tiene citas, omite domingos (6 columnas Lu-Sá).
    * Si al menos un domingo tiene citas agendadas, incluye domingos (7 columnas Lu-Do).
-   *
-   * Cada celda incluye: número de día + icono de estado (para daltonismo).
    *
    * @param {Array<Object>} daysData Datos de días del mes
    * @param {number} year Año
    * @param {number} month Mes (1-12)
    */
   renderGrid(daysData, year, month) {
-    // 1. Detectar si algún domingo del mes tiene citas registradas
     const hayDomingosConCitas = daysData.some(dia => dia.dia_semana === 0 && (dia.total_citas > 0 || dia.nivel_ocupacion === 'parcial' || dia.nivel_ocupacion === 'todo agendado'));
 
-    // Configurar encabezado y rejilla: 6 columnas (Lu-Sá) o 7 columnas (Lu-Do)
-    if (hayDomingosConCitas) {
-      this.header.className = 'cal-grid-header cols-7';
-      this.grid.className = 'cal-grid cols-7';
-      this.header.innerHTML = `
-        <div class="col-name">Lu</div>
-        <div class="col-name">Ma</div>
-        <div class="col-name">Mi</div>
-        <div class="col-name">Ju</div>
-        <div class="col-name">Vi</div>
-        <div class="col-name">Sá</div>
-        <div class="col-name">Do</div>
-      `;
-    } else {
-      this.header.className = 'cal-grid-header cols-6';
-      this.grid.className = 'cal-grid cols-6';
-      this.header.innerHTML = `
-        <div class="col-name">Lu</div>
-        <div class="col-name">Ma</div>
-        <div class="col-name">Mi</div>
-        <div class="col-name">Ju</div>
-        <div class="col-name">Vi</div>
-        <div class="col-name">Sá</div>
-      `;
-    }
+    this.renderGridHeader(hayDomingosConCitas);
 
-    // Filtrar días a mostrar: si no hay domingos con citas, omitir los domingos
     const diasVisibles = hayDomingosConCitas
       ? daysData
       : daysData.filter(dia => dia.dia_semana !== 0);
@@ -268,11 +262,38 @@ export default class CalendarView {
       return;
     }
 
-    // 2. Calcular los espacios en blanco iniciales antes del primer día visible del mes
+    this.renderGridCells(diasVisibles, hayDomingosConCitas);
+  }
+
+  /**
+   * Configura los encabezados de columnas de la cuadrícula (6 columnas Lu-Sá o 7 Lu-Do).
+   *
+   * @param {boolean} hayDomingosConCitas Si hay citas en domingo que requieran mostrar la 7ma columna
+   */
+  renderGridHeader(hayDomingosConCitas) {
+    const colClass = hayDomingosConCitas ? 'cols-7' : 'cols-6';
+    this.header.className = `cal-grid-header ${colClass}`;
+    this.grid.className = `cal-grid ${colClass}`;
+
+    const diasNombres = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
+    if (hayDomingosConCitas) {
+      diasNombres.push('Do');
+    }
+
+    this.header.innerHTML = diasNombres.map(d => `<div class="col-name">${d}</div>`).join('');
+  }
+
+  /**
+   * Genera y renderiza las celdas de días en la cuadrícula con accesibilidad y vinculación de eventos.
+   *
+   * @param {Array<Object>} diasVisibles Lista de días a desplegar
+   * @param {boolean} hayDomingosConCitas Indicador de inclusión de domingos
+   */
+  renderGridCells(diasVisibles, hayDomingosConCitas) {
     const primerDiaVisible = diasVisibles[0];
     const primerDiaFecha = new Date(primerDiaVisible.fecha + 'T12:00:00');
     const diaSemanaJs = primerDiaFecha.getDay(); // 0 = Domingo, 1 = Lunes, ...
-    
+
     // Mapear a índice de columna (Lunes = 0, ..., Sábado = 5, Domingo = 6)
     const colIndexPrimerDia = diaSemanaJs === 0 ? 6 : diaSemanaJs - 1;
 
@@ -281,30 +302,17 @@ export default class CalendarView {
     // Rellenar espacios vacíos al inicio de la primera fila
     const columnasTotales = hayDomingosConCitas ? 7 : 6;
     const offsetInicial = colIndexPrimerDia < columnasTotales ? colIndexPrimerDia : 0;
-    
+
     for (let i = 0; i < offsetInicial; i++) {
       html += '<div></div>';
     }
 
-    // 3. Renderizar cada celda del mes
+    // Renderizar cada celda del mes
     diasVisibles.forEach(dia => {
       const dayNum = parseInt(dia.fecha.split('-')[2], 10);
       const isToday = dia.fecha === this.todayStr;
       const isSelected = dia.fecha === this.selectedDate;
-
-      // Determinar clase de color según regla de negocio
-      let statusClass = 'cal-status-bloqueado';
-      if (dia.nivel_ocupacion === 'no laboral') {
-        statusClass = 'cal-status-no-laboral';
-      } else if (dia.nivel_ocupacion === 'nada agendado') {
-        statusClass = 'cal-status-nada';
-      } else if (dia.nivel_ocupacion === 'parcial') {
-        statusClass = 'cal-status-parcial';
-      } else if (dia.nivel_ocupacion === 'todo agendado') {
-        statusClass = 'cal-status-todo';
-      } else if (dia.nivel_ocupacion === 'bloqueado') {
-        statusClass = 'cal-status-bloqueado';
-      }
+      const statusClass = this.getStatusClass(dia.nivel_ocupacion);
 
       const classes = [
         'cal-day-cell',
@@ -314,8 +322,6 @@ export default class CalendarView {
       ].filter(Boolean).join(' ');
 
       const ariaLabel = `${dayNum} de ${this.monthTitle.textContent}, ${dia.nivel_ocupacion}, ${dia.total_citas || 0} citas`;
-
-      // Icono de estado: diferenciador primario para daltonismo
       const statusIcon = this.getStatusIcon(dia.nivel_ocupacion);
 
       html += `
@@ -333,7 +339,7 @@ export default class CalendarView {
 
     this.grid.innerHTML = html;
 
-    // 4. Asignar manejadores de eventos táctiles y de clic
+    // Asignar manejadores de eventos táctiles y de teclado
     this.grid.querySelectorAll('.cal-day-cell').forEach(el => {
       el.addEventListener('click', () => {
         this.selectDay(el.dataset.fecha);
