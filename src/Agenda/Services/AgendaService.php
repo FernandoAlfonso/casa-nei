@@ -159,17 +159,29 @@ class AgendaService
   }
 
   /**
-   * Obtiene citas con detalles de cliente en un rango de fechas, útil para el calendario admin.
+   * Obtiene citas con detalles de cliente en un rango de fechas, útil para el calendario admin y citas del día.
    *
-   * @param string $fechaInicio
-   * @param string $fechaFin
-   * @param string|null $estado Filtro opcional
+   * @param string $fechaInicio Fecha inicial en formato YYYY-MM-DD
+   * @param string $fechaFin Fecha final en formato YYYY-MM-DD
+   * @param array|string|null $estado Filtro opcional por uno o varios estados
    * @return array
    */
-  public function obtenerCitasAdminPorRango(string $fechaInicio, string $fechaFin, ?string $estado = null): array
+  public function obtenerCitasAdminPorRango(string $fechaInicio, string $fechaFin, array|string|null $estado = null): array
   {
     return $this->citaRepo->obtenerDetallesPorRangoFechas($fechaInicio, $fechaFin, $estado);
   }
+
+  /**
+   * Obtiene el detalle completo administrativo de una cita por su ID.
+   *
+   * @param int $citaId ID de la cita.
+   * @return array<string, mixed>|null
+   */
+  public function obtenerDetalleCitaAdmin(int $citaId): ?array
+  {
+    return $this->citaRepo->obtenerDetallePorId($citaId);
+  }
+
 
   /**
    * Caso de Uso: Agendar una nueva cita (Estado inicial: Pendiente).

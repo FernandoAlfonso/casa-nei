@@ -392,6 +392,7 @@ class AgendaController
    * - ?fecha=YYYY-MM-DD
    * - ?mes=YYYY-MM
    * - ?estado=confirmada
+   * - ?estados=confirmada,pendiente
    * 
    * Si no se envían filtros de fecha, puede retornar un rango por defecto o todo.
    *
@@ -401,16 +402,36 @@ class AgendaController
   public function obtenerCitasAdmin(Request $request): void
   {
     try {
+      $id = $request->getQuery('id');
+      if ($id !== null && $id !== '') {
+        $citaId = (int) $id;
+        $detalle = $this->agendaService->obtenerDetalleCitaAdmin($citaId);
+        if (!$detalle) {
+          Response::error("Cita no encontrada", 404);
+          return;
+        }
+        Response::success($detalle, "Detalle de cita recuperado con éxito");
+        return;
+      }
+
       $fecha = $request->getQuery('fecha');
       $mes = $request->getQuery('mes');
       $estado = $request->getQuery('estado');
+      $estadosParam = $request->getQuery('estados');
+
+      $filtroEstado = null;
+      if ($estadosParam !== null && $estadosParam !== '') {
+        $filtroEstado = array_values(array_filter(array_map('trim', explode(',', (string) $estadosParam))));
+      } elseif ($estado !== null && $estado !== '') {
+        $filtroEstado = (string) $estado;
+      }
 
       if ($fecha) {
-        $citas = $this->agendaService->obtenerCitasAdminPorRango($fecha, $fecha, $estado);
+        $citas = $this->agendaService->obtenerCitasAdminPorRango($fecha, $fecha, $filtroEstado);
       } elseif ($mes) {
         $inicio = $mes . '-01';
         $fin = date('Y-m-t', strtotime($inicio));
-        $citas = $this->agendaService->obtenerCitasAdminPorRango($inicio, $fin, $estado);
+        $citas = $this->agendaService->obtenerCitasAdminPorRango($inicio, $fin, $filtroEstado);
       } else {
         // Por defecto: traer todas las pendientes (comportamiento legacy/fallback)
         $citas = $this->agendaService->obtenerSolicitudesPendientesAdmin();

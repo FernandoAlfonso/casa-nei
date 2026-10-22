@@ -861,3 +861,195 @@ main#app-root {
   color: var(--cita-cancelada);
   background: rgba(194, 65, 12, 0.1);
 }
+
+/* ============================================================
+ * Vista de Citas del Día (HomeView) - Compacto y Móvil-First
+ * Accesibilidad para daltonismo y prevención de desbordamiento
+ * ============================================================ */
+
+.citas-hoy-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cita-hoy-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  cursor: pointer;
+  scroll-margin-top: 80px; /* Espacio para barra de navegación superior sticky */
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, opacity 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cita-hoy-card:hover {
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.cita-hoy-card:active {
+  transform: scale(0.985);
+  background: var(--bg-hover);
+}
+
+/* Indicadores de estado por borde lateral */
+.cita-hoy-card.confirmada {
+  border-left: 4px solid var(--cita-confirmada);
+}
+
+.cita-hoy-card.pendiente {
+  border-left: 4px solid var(--cita-pendiente);
+}
+
+/* Cita pasada: opacidad reducida para indicar que ya transcurrió */
+.cita-hoy-card.pasada {
+  opacity: 0.52;
+  filter: grayscale(15%);
+}
+
+.cita-hoy-card.pasada:hover,
+.cita-hoy-card.pasada:focus {
+  opacity: 0.85;
+  filter: none;
+}
+
+/* Cita en curso: destacada con fondo sutil y borde primario */
+.cita-hoy-card.en-curso {
+  background: rgba(21, 128, 61, 0.08);
+  border: 1.5px solid var(--primary);
+  border-left: 5px solid var(--primary);
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, 0.15), var(--shadow-sm);
+}
+
+/* Próxima cita del día: acento visual para el objetivo de auto-scroll */
+.cita-hoy-card.proxima {
+  border-left: 5px solid var(--primary);
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, 0.2), var(--shadow-sm);
+}
+
+/* Estructura interna de la tarjeta compacta */
+.cita-hoy-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cita-hoy-time-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cita-hoy-horario {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+}
+
+.cita-hoy-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.cita-hoy-cliente {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.cita-hoy-servicio {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Etiquetas temporales "En curso" / "Siguiente" */
+.cita-hoy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.cita-hoy-tag.tag-encurso {
+  color: var(--primary);
+  background: rgba(21, 128, 61, 0.15);
+}
+
+.cita-hoy-tag.tag-proxima {
+  color: #1e40af;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* Indicador pulsante para cita en curso */
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.7);
+  animation: pulse-dot-anim 1.8s infinite;
+}
+
+@keyframes pulse-dot-anim {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(21, 128, 61, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(21, 128, 61, 0);
+  }
+}
+
+/* Barra compacta cuando no hay solicitudes */
+.solicitudes-empty-compact {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}

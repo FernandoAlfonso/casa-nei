@@ -283,14 +283,14 @@ class CitaRepository
   }
 
   /**
-   * Obtiene citas con detalles de cliente en un rango de fechas, útil para el calendario admin.
+   * Obtiene detalles completos de citas en un rango de fechas, útil para el calendario y citas del día.
    *
-   * @param string $fechaInicio
-   * @param string $fechaFin
-   * @param string|null $estado Filtro opcional
+   * @param string $fechaInicio Fecha inicial en formato YYYY-MM-DD
+   * @param string $fechaFin Fecha final en formato YYYY-MM-DD
+   * @param array|string|null $estado Filtro opcional por uno o varios estados
    * @return array
    */
-  public function obtenerDetallesPorRangoFechas(string $fechaInicio, string $fechaFin, ?string $estado = null): array
+  public function obtenerDetallesPorRangoFechas(string $fechaInicio, string $fechaFin, array|string|null $estado = null): array
   {
     $sql = "SELECT
               c.id AS cita_id,
@@ -318,7 +318,13 @@ class CitaRepository
     
     $params = [$fechaInicio, $fechaFin];
     
-    if ($estado) {
+    if (is_array($estado) && !empty($estado)) {
+      $placeholders = implode(',', array_fill(0, count($estado), '?'));
+      $sql .= " AND c.estado IN ($placeholders)";
+      foreach ($estado as $e) {
+        $params[] = $e;
+      }
+    } elseif (is_string($estado) && $estado !== '') {
       $sql .= " AND c.estado = ?";
       $params[] = $estado;
     }
@@ -333,4 +339,47 @@ class CitaRepository
       return $row;
     });
   }
+
+  /**
+   * Obtiene los detalles completos de una cita por su ID primario, incluyendo datos del cliente y servicio.
+   *
+   * @param int $id ID de la cita.
+   * @return array<string, mixed>|null
+   */
+  public function obtenerDetallePorId(int $id): ?array
+  {
+    $sql = "SELECT
+              c.id AS cita_id,
+              c.codigo_cita,
+              c.fecha_cita,
+              c.hora_inicio,
+              c.hora_fin,
+              c.estado,
+              c.tiene_whatsapp,
+              c.canal,
+              c.notas_cliente,
+              c.notas_admin,
+              c.created_at AS fecha_solicitud,
+              cl.id AS cliente_id,
+              cl.nombre_completo AS cliente_nombre,
+              cl.telefono_encriptado,
+              s.id AS servicio_id,
+              s.nombre AS servicio_nombre,
+              s.duracion_minutos,
+              s.precio AS servicio_precio
+            FROM citas c
+            INNER JOIN clientes cl ON c.cliente_id = cl.id
+            INNER JOIN servicios s ON c.servicio_id = s.id
+            WHERE c.id = ?
+            LIMIT 1";
+
+    return $this->db->fetchOne($sql, [$id], function (array $row): array {
+      $row['id'] = (int) $row['cita_id'];
+      $encryptedPhone = $row['telefono_encriptado'] ?? null;
+      $row['cliente_telefono'] = (!empty($encryptedPhone)) ? $this->crypto->decrypt($encryptedPhone) : null;
+      unset($row['telefono_encriptado']);
+      return $row;
+    });
+  }
 }
+

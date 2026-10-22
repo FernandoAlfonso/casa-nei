@@ -28,6 +28,7 @@ const routes = {
   'settings': SettingsView,
   'new-cita': NewCitaView,
   'solicitud': SolicitudDetalleView,
+  'cita': SolicitudDetalleView,
   'settings/servicios': ServicesView,
   'settings/horarios': HorariosView,
   'settings/bloqueos': BloqueosView
