@@ -4,7 +4,7 @@
  * Accesibilidad para daltonismo:
  *  - Iconos SVG reemplazan emojis para consistencia Android/iOS/Web
  *  - Estado de notificaciones usa texto + icono (no solo color)
- *  - Botón "Cerrar Sesión" usa icono de eliminar (naranja-oscuro)
+ *  - Botón "Cerrar Sesión" usa icono de salir/box-arrow-right
  *
  * @module views/SettingsView
  */
@@ -18,7 +18,7 @@ import {
   iconPeopleFill,
   iconCheckCircleFill,
   iconXCircleFill,
-  iconTrashFill
+  iconBoxArrowRight
 } from '../icons.js';
 
 /**
@@ -88,7 +88,7 @@ export default class SettingsView {
         </div>
 
         <button id="btnLogout" class="btn btn-delete">
-          ${iconTrashFill('icon-btn')} Cerrar Sesión
+          ${iconBoxArrowRight('icon-btn')} Cerrar Sesión
         </button>
       </div>
     `;

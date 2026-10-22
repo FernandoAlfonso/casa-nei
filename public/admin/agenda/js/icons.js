@@ -126,6 +126,14 @@ export const iconArrowLeft = (cls = '') =>
 export const iconPencilFill = (cls = '') =>
   svg('<path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>', cls, 'Editar');
 
+/**
+ * Icono: Cuadro con flecha saliendo — Cerrar sesión / Salir
+ * @param {string} [cls] - Clases CSS adicionales
+ * @returns {string} SVG markup
+ */
+export const iconBoxArrowRight = (cls = '') =>
+  svg('<path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>', cls, 'Cerrar Sesión');
+
 // ============================================================
 // Iconos de Navegación
 // ============================================================
@@ -195,12 +203,20 @@ export const iconStarFill = (cls = '') =>
   svg('<path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>', cls, 'Servicios');
 
 /**
- * Icono: Hoja — Logo/Brand (alternativa SVG al emoji 🌿)
+ * Icono: Yin Yang — Logo/Brand Casa Nei (Bootstrap Icons: bi-yin-yang)
+ * @param {string} [cls] - Clases CSS adicionales
+ * @returns {string} SVG markup
+ */
+export const iconYinYang = (cls = '') =>
+  svg('<path d="M9.167 4.5a1.167 1.167 0 1 1-2.334 0 1.167 1.167 0 0 1 2.334 0"/><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0M1 8a7 7 0 0 1 7-7 3.5 3.5 0 1 1 0 7 3.5 3.5 0 1 0 0 7 7 7 0 0 1-7-7m7 4.667a1.167 1.167 0 1 1 0-2.334 1.167 1.167 0 0 1 0 2.334"/>', cls, 'Casa Nei');
+
+/**
+ * Icono: Hoja — Alternativa decorativa
  * @param {string} [cls] - Clases CSS adicionales
  * @returns {string} SVG markup
  */
 export const iconLeaf = (cls = '') =>
-  svg('<path d="M8.416.223a.5.5 0 0 0-.832 0l-3 4.5A.5.5 0 0 0 5 5.5h.098L3.076 8.735A.5.5 0 0 0 3.5 9.5h.191l-1.638 3.276a.5.5 0 0 0 .447.724H7v1.5a.5.5 0 0 0 1 0V13.5h4.5a.5.5 0 0 0 .447-.724L11.31 9.5h.191a.5.5 0 0 0 .424-.765L9.902 5.5H10a.5.5 0 0 0 .416-.777z"/>', cls, 'Casa Nei');
+  svg('<path d="M8.416.223a.5.5 0 0 0-.832 0l-3 4.5A.5.5 0 0 0 5 5.5h.098L3.076 8.735A.5.5 0 0 0 3.5 9.5h.191l-1.638 3.276a.5.5 0 0 0 .447.724H7v1.5a.5.5 0 0 0 1 0V13.5h4.5a.5.5 0 0 0 .447-.724L11.31 9.5h.191a.5.5 0 0 0 .424-.765L9.902 5.5H10a.5.5 0 0 0 .416-.777z"/>', cls, 'Hoja');
 
 /**
  * Icono: Whatsapp estilo — WhatsApp
