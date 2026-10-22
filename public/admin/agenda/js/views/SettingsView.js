@@ -9,6 +9,7 @@
  * @module views/SettingsView
  */
 
+import Modal from '../services/modal.js';
 import {
   iconBellFill,
   iconStarFill,
@@ -128,17 +129,29 @@ export default class SettingsView {
           if (success) {
             pushStatusText.innerHTML = `Notificaciones Activas ${iconCheckCircleFill()}`;
             pushStatusText.style.color = 'var(--primary)';
-            alert('¡Notificaciones Push habilitadas correctamente en este dispositivo!');
+            await Modal.alert({
+              title: 'Notificaciones Activas',
+              message: '¡Notificaciones Push habilitadas correctamente en este dispositivo!',
+              type: 'success'
+            });
           } else {
             pushStatusText.innerHTML = `Permiso denegado ${iconXCircleFill()}`;
             pushStatusText.style.color = 'var(--btn-orange-bg)';
-            alert('No se pudo activar: Permiso denegado o push no soportado.');
+            await Modal.alert({
+              title: 'Permiso denegado',
+              message: 'No se pudo activar: Permiso denegado o Web Push no soportado en este navegador.',
+              type: 'warning'
+            });
           }
-        }).catch(err => {
+        }).catch(async (err) => {
           console.error(err);
           pushStatusText.innerHTML = `Error al activar ${iconXCircleFill()}`;
           pushStatusText.style.color = 'var(--btn-orange-bg)';
-          alert(`Error al activar notificaciones: ${err.message}`);
+          await Modal.alert({
+            title: 'Error al activar',
+            message: `Error al activar notificaciones: ${err.message}`,
+            type: 'error'
+          });
         });
       });
 

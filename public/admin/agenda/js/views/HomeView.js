@@ -10,6 +10,7 @@
  */
 
 import ApiService from '../services/api.js';
+import Modal from '../services/modal.js';
 import {
   iconCheckCircleFill,
   iconXCircleFill,
@@ -157,13 +158,20 @@ export default class HomeView {
 
   /**
    * Maneja la acción de aceptar una solicitud de cita.
-   * Muestra prompt para mensaje opcional y llama a la API de confirmación.
+   * Muestra modal táctil para mensaje opcional y llama a la API de confirmación.
    *
    * @param {string} citaId - ID de la cita a confirmar
    * @returns {Promise<void>}
    */
   async handleAccept(citaId) {
-    const msg = prompt('¿Deseas agregar algún mensaje o indicación al paciente al confirmar? (Opcional)');
+    const msg = await Modal.prompt({
+      title: 'Confirmar Solicitud',
+      message: '¿Deseas agregar algún mensaje o indicación al paciente al confirmar? (Opcional)',
+      placeholder: 'Ej. Por favor acudir con 10 minutos de anticipación...',
+      confirmText: 'Confirmar Cita',
+      confirmType: 'accept',
+      isTextarea: true
+    });
     if (msg === null) return; // Cancelado
 
     try {
@@ -182,20 +190,31 @@ export default class HomeView {
 
       await this.loadSolicitudes();
     } catch (error) {
-      alert('Error al confirmar: ' + error.message);
+      await Modal.alert({
+        title: 'Error al confirmar',
+        message: error.message,
+        type: 'error'
+      });
       await this.loadSolicitudes();
     }
   }
 
   /**
    * Maneja la acción de rechazar una solicitud de cita.
-   * Muestra prompt para motivo opcional y llama a la API de cancelación.
+   * Muestra modal táctil para motivo opcional y llama a la API de cancelación.
    *
    * @param {string} citaId - ID de la cita a rechazar
    * @returns {Promise<void>}
    */
   async handleReject(citaId) {
-    const motivo = prompt('Motivo del rechazo / cancelación (Opcional):');
+    const motivo = await Modal.prompt({
+      title: 'Rechazar Solicitud',
+      message: 'Motivo del rechazo o cancelación (Opcional):',
+      placeholder: 'Ej. Horario no disponible, terapeuta en descanso...',
+      confirmText: 'Rechazar Cita',
+      confirmType: 'reject',
+      isTextarea: true
+    });
     if (motivo === null) return; // Cancelado
 
     try {
@@ -214,7 +233,11 @@ export default class HomeView {
 
       await this.loadSolicitudes();
     } catch (error) {
-      alert('Error al cancelar: ' + error.message);
+      await Modal.alert({
+        title: 'Error al cancelar',
+        message: error.message,
+        type: 'error'
+      });
       await this.loadSolicitudes();
     }
   }

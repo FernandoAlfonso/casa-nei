@@ -12,6 +12,7 @@
  */
 
 import ApiService from '../../services/api.js';
+import Modal from '../../services/modal.js';
 import {
   iconPlusCircleFill,
   iconPencilFill,
@@ -221,7 +222,11 @@ export default class ServicesView {
         document.body.removeChild(overlay);
         await this.loadServicios();
       } catch (error) {
-        alert('Error al guardar: ' + error.message);
+        await Modal.alert({
+          title: 'Error al guardar',
+          message: error.message,
+          type: 'error'
+        });
       }
     });
   }

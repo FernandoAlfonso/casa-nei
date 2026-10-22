@@ -11,6 +11,7 @@
  */
 
 import ApiService from '../../services/api.js';
+import Modal from '../../services/modal.js';
 import {
   iconLockFill,
   iconTrashFill,
@@ -110,18 +111,29 @@ export default class BloqueosView {
   }
 
   /**
-   * Elimina un bloqueo por ID tras confirmar con el usuario.
+   * Elimina un bloqueo por ID tras confirmar con el usuario mediante modal UI.
    *
    * @param {string} id - ID del bloqueo a eliminar
    * @returns {Promise<void>}
    */
   async eliminarBloqueo(id) {
-    if (!confirm('¿Seguro que deseas eliminar este bloqueo?')) return;
+    const confirmado = await Modal.confirm({
+      title: '¿Eliminar bloqueo?',
+      message: 'Esta fecha volverá a estar disponible para citas de pacientes.',
+      confirmText: 'Eliminar',
+      confirmType: 'delete'
+    });
+    if (!confirmado) return;
+
     try {
       await ApiService.post('/admin/config/bloqueos/eliminar', { id });
       await this.loadBloqueos();
     } catch (error) {
-      alert('Error al eliminar: ' + error.message);
+      await Modal.alert({
+        title: 'Error al eliminar',
+        message: error.message,
+        type: 'error'
+      });
     }
   }
 
@@ -177,7 +189,11 @@ export default class BloqueosView {
         document.body.removeChild(overlay);
         await this.loadBloqueos();
       } catch (error) {
-        alert('Error al guardar: ' + error.message);
+        await Modal.alert({
+          title: 'Error al guardar',
+          message: error.message,
+          type: 'error'
+        });
       }
     });
   }

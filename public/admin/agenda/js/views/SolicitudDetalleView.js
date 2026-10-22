@@ -10,6 +10,7 @@
  */
 
 import ApiService from '../services/api.js';
+import Modal from '../services/modal.js';
 import {
   iconCheckCircleFill,
   iconXCircleFill,
@@ -175,14 +176,21 @@ export default class SolicitudDetalleView {
 
   /**
    * Maneja la acción de aceptar la solicitud.
-   * Solicita mensaje opcional y confirma la cita via API.
+   * Solicita mensaje opcional con modal táctil y confirma la cita via API.
    *
    * @param {string} citaId - ID de la cita a confirmar
    * @param {HTMLButtonElement} btn - Botón que disparó la acción
    * @returns {Promise<void>}
    */
   async handleAccept(citaId, btn) {
-    const msg = prompt('¿Deseas agregar algún mensaje o indicación al paciente al confirmar? (Opcional)');
+    const msg = await Modal.prompt({
+      title: 'Confirmar Solicitud',
+      message: '¿Deseas agregar algún mensaje o indicación al paciente al confirmar? (Opcional)',
+      placeholder: 'Ej. Por favor acudir con 10 minutos de anticipación...',
+      confirmText: 'Confirmar Cita',
+      confirmType: 'accept',
+      isTextarea: true
+    });
     if (msg === null) return; // Cancelado
 
     try {
@@ -201,7 +209,11 @@ export default class SolicitudDetalleView {
       // Regresar al listado general después de aceptar
       window.location.hash = '#home';
     } catch (error) {
-      alert('Error al confirmar: ' + error.message);
+      await Modal.alert({
+        title: 'Error al confirmar',
+        message: error.message,
+        type: 'error'
+      });
       btn.disabled = false;
       btn.innerHTML = `${iconCheckCircleFill('icon-btn')} Aceptar Solicitud`;
     }
@@ -209,14 +221,21 @@ export default class SolicitudDetalleView {
 
   /**
    * Maneja la acción de rechazar la solicitud.
-   * Solicita motivo opcional y cancela la cita via API.
+   * Solicita motivo opcional con modal táctil y cancela la cita via API.
    *
    * @param {string} citaId - ID de la cita a rechazar
    * @param {HTMLButtonElement} btn - Botón que disparó la acción
    * @returns {Promise<void>}
    */
   async handleReject(citaId, btn) {
-    const motivo = prompt('Motivo del rechazo / cancelación (Opcional):');
+    const motivo = await Modal.prompt({
+      title: 'Rechazar Solicitud',
+      message: 'Motivo del rechazo o cancelación (Opcional):',
+      placeholder: 'Ej. Horario no disponible, terapeuta en descanso...',
+      confirmText: 'Rechazar Cita',
+      confirmType: 'reject',
+      isTextarea: true
+    });
     if (motivo === null) return; // Cancelado
 
     try {
@@ -235,7 +254,11 @@ export default class SolicitudDetalleView {
       // Regresar al listado general después de rechazar
       window.location.hash = '#home';
     } catch (error) {
-      alert('Error al cancelar: ' + error.message);
+      await Modal.alert({
+        title: 'Error al cancelar',
+        message: error.message,
+        type: 'error'
+      });
       btn.disabled = false;
       btn.innerHTML = `${iconXCircleFill('icon-btn')} Rechazar Solicitud`;
     }

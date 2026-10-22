@@ -11,6 +11,7 @@
  */
 
 import ApiService from '../../services/api.js';
+import Modal from '../../services/modal.js';
 import {
   iconArrowLeft,
   iconPlusCircleFill,
@@ -237,7 +238,11 @@ export default class HorariosView {
       });
       
       if (turnos.length === 0) {
-        alert('Agrega al menos un rango de horario válido o marca el día como no laboral.');
+        await Modal.alert({
+          title: 'Horario requerido',
+          message: 'Agrega al menos un rango de horario válido o marca el día como no laboral.',
+          type: 'warning'
+        });
         return;
       }
     }
@@ -261,7 +266,11 @@ export default class HorariosView {
         btnSave.disabled = false;
       }, 2000);
     } catch (error) {
-      alert('Error al guardar: ' + error.message);
+      await Modal.alert({
+        title: 'Error al guardar',
+        message: error.message,
+        type: 'error'
+      });
       btnSave.innerHTML = originalHTML;
       btnSave.disabled = false;
     }
