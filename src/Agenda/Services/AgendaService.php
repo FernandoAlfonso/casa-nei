@@ -204,6 +204,7 @@ class AgendaService
    * @param string $medioContacto Exclusivamente 'whatsapp'.
    * @param bool|null $tieneWhatsapp Indica si el paciente dispone de WhatsApp (true por defecto para web).
    * @param string $canal Canal de origen ('web').
+   * @param bool $notificarPush Si es true, dispara la notificación de inmediato (por defecto true).
    * @return array<string, mixed> Resumen de la reserva creada.
    * @throws Exception Si el servicio no es válido, el horario no está disponible o falla la persistencia.
    */
@@ -216,7 +217,8 @@ class AgendaService
     ?string $notasCliente = null,
     string $medioContacto = 'whatsapp',
     ?bool $tieneWhatsapp = null,
-    string $canal = 'web'
+    string $canal = 'web',
+    bool $notificarPush = true
   ): array {
     $servicio = $this->servicioRepo->buscarPorId($servicioId);
     if (!$servicio || !$servicio->isActivo()) {
@@ -317,8 +319,8 @@ class AgendaService
       $whatsappUrl = $this->whatsAppService->crearEnlaceWhatsapp($this->adminWhatsapp, $mensajeWhatsapp);
     }
 
-    // 5. Notificar al Administrador mediante Web Push en su PWA (no bloqueante)
-    if ($this->notificationService) {
+    // 5. Notificar al Administrador mediante Web Push en su PWA (si no se difirió)
+    if ($notificarPush && $this->notificationService) {
       $this->notificationService->notificarAdminNuevaCita($citaCreada, $clienteCreado, $servicio);
     }
 
@@ -348,6 +350,41 @@ class AgendaService
       'mensaje_whatsapp' => $mensajeWhatsapp,
       'whatsapp_url' => $whatsappUrl
     ];
+  }
+
+  /**
+   * Dispara la notificación Web Push al administrador para una cita ya creada por su ID.
+   * Permite despachar el aviso en segundo plano tras haber enviado la respuesta al navegador móvil.
+   *
+   * @param int $citaId ID de la cita registrada.
+   * @return void
+   */
+  public function notificarAdminPorCitaId(int $citaId): void
+  {
+    if (!$this->notificationService || $citaId <= 0) {
+      return;
+    }
+
+    try {
+      $cita = $this->citaRepo->buscarPorId($citaId);
+      if (!$cita) {
+        return;
+      }
+
+      $cliente = $this->clienteRepo->buscarPorId($cita->getClienteId());
+      if (!$cliente) {
+        return;
+      }
+
+      $servicio = $this->servicioRepo->buscarPorId($cita->getServicioId());
+      if (!$servicio) {
+        return;
+      }
+
+      $this->notificationService->notificarAdminNuevaCita($cita, $cliente, $servicio);
+    } catch (\Throwable $e) {
+      error_log("Error al despachar push diferido para cita #{$citaId}: " . $e->getMessage());
+    }
   }
 
   /**

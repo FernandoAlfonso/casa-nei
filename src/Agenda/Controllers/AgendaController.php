@@ -258,14 +258,22 @@ class AgendaController
         notasCliente: $notas,
         medioContacto: $medioContacto,
         tieneWhatsapp: $tieneWhatsapp,
-        canal: $canal
+        canal: $canal,
+        notificarPush: false
       );
 
-      Response::success(
+      // Liberar la conexión HTTP al navegador de inmediato (< 100 ms)
+      Response::successAndContinue(
         $resultado,
         "Cita agendada con éxito. Procede a enviar el mensaje por WhatsApp.",
         201
       );
+
+      // Despacho de Web Push en segundo plano para no demorar al paciente
+      if (!empty($resultado['cita_id'])) {
+        $this->agendaService->notificarAdminPorCitaId((int) $resultado['cita_id']);
+      }
+      exit;
     } catch (Throwable $e) {
       $mensaje = $e->getMessage();
       // Si se detecta conflicto de horario concurrente, devolver HTTP 409 Conflict

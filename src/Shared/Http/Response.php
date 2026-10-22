@@ -45,6 +45,53 @@ class Response
   }
 
   /**
+   * Emite la respuesta JSON al cliente de inmediato y libera la conexión HTTP,
+   * permitiendo que PHP continúe ejecutando tareas en segundo plano (Web Push, logs, etc.)
+   * sin demorar la interacción del usuario final en el navegador móvil.
+   *
+   * @param mixed $data Datos a serializar.
+   * @param int $statusCode Código HTTP (por defecto 200).
+   * @return void
+   */
+  public static function jsonAndContinue(mixed $data, int $statusCode = 200): void
+  {
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+    // Deshabilitar caché agresivo en navegadores móviles (como iOS/Safari)
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+
+    $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+      $flags |= JSON_PRETTY_PRINT;
+    }
+
+    $output = json_encode($data, $flags);
+
+    // En entornos PHP-FPM (como cPanel / Hostgator en producción)
+    if (function_exists('fastcgi_finish_request')) {
+      echo $output;
+      fastcgi_finish_request();
+      return;
+    }
+
+    // Fallback para CLI Server / Apache / mod_php
+    ignore_user_abort(true);
+    header('Connection: close');
+    header('Content-Length: ' . strlen($output));
+    echo $output;
+    if (ob_get_level() > 0) {
+      ob_end_flush();
+    }
+    flush();
+  }
+
+  /**
    * Emite una respuesta JSON de éxito estandarizada.
    *
    * @param mixed $data Datos o payload de respuesta.
@@ -55,6 +102,23 @@ class Response
   public static function success(mixed $data = null, string $message = 'Operación exitosa', int $statusCode = 200): void
   {
     self::json([
+      'success' => true,
+      'message' => $message,
+      'data'    => $data
+    ], $statusCode);
+  }
+
+  /**
+   * Emite una respuesta JSON de éxito estandarizada liberando de inmediato la conexión al cliente.
+   *
+   * @param mixed $data Datos o payload de respuesta.
+   * @param string $message Mensaje informativo para el cliente.
+   * @param int $statusCode Código HTTP (por defecto 200).
+   * @return void
+   */
+  public static function successAndContinue(mixed $data = null, string $message = 'Operación exitosa', int $statusCode = 200): void
+  {
+    self::jsonAndContinue([
       'success' => true,
       'message' => $message,
       'data'    => $data

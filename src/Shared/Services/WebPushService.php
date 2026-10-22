@@ -162,15 +162,57 @@ class WebPushService
   }
 
   /**
-   * Obtiene la lista de todas las suscripciones push activas registradas.
+  /**
+   * Elimina o desactiva una suscripción push inválida o expirada (HTTP 404/410).
    *
+   * @param string $endpoint URL del endpoint a remover.
+   * @return bool
+   */
+  public function eliminarSuscripcion(string $endpoint): bool
+  {
+    if (empty($endpoint)) {
+      return false;
+    }
+
+    $eliminadoDb = false;
+    if ($this->tieneTablaPush()) {
+      try {
+        $hash = hash('sha256', $endpoint);
+        $this->getDb()->execute(
+          "UPDATE suscripciones_push SET activo = 0, updated_at = NOW() WHERE endpoint_hash = ? OR endpoint = ?",
+          [$hash, $endpoint]
+        );
+        $eliminadoDb = true;
+      } catch (\Throwable $e) {
+        error_log("Error al desactivar suscripción push en MySQL: " . $e->getMessage());
+      }
+    }
+
+    $subscriptions = $this->obtenerSuscripcionesDesdeArchivo();
+    if (isset($subscriptions[$endpoint])) {
+      unset($subscriptions[$endpoint]);
+      @file_put_contents($this->subsFilePath, json_encode($subscriptions, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    return $eliminadoDb;
+  }
+
+  /**
+   * Obtiene la lista de suscripciones push activas registradas, ordenadas de la más reciente a la más antigua.
+   * Opcionalmente permite limitar la cantidad retornada para evitar cuellos de botella por acumulación.
+   *
+   * @param int $limite Cantidad máxima de suscripciones a retornar (0 para todas).
    * @return array<string, array> Mapa de suscripciones indexadas por endpoint.
    */
-  public function obtenerSuscripciones(): array
+  public function obtenerSuscripciones(int $limite = 0): array
   {
     if ($this->tieneTablaPush()) {
       try {
-        $rows = $this->getDb()->fetchAll("SELECT * FROM suscripciones_push WHERE activo = 1 ORDER BY id DESC");
+        $sql = "SELECT * FROM suscripciones_push WHERE activo = 1 ORDER BY updated_at DESC, id DESC";
+        if ($limite > 0) {
+          $sql .= " LIMIT " . (int) $limite;
+        }
+        $rows = $this->getDb()->fetchAll($sql);
         if (!empty($rows)) {
           $result = [];
           foreach ($rows as $r) {
@@ -191,7 +233,23 @@ class WebPushService
       }
     }
 
-    return $this->obtenerSuscripcionesDesdeArchivo();
+    $subs = $this->obtenerSuscripcionesDesdeArchivo();
+    if (empty($subs)) {
+      return [];
+    }
+
+    // Ordenar de más reciente a más antigua
+    uasort($subs, function ($a, $b) {
+      $fa = $a['actualizado_el'] ?? '';
+      $fb = $b['actualizado_el'] ?? '';
+      return strcmp($fb, $fa);
+    });
+
+    if ($limite > 0 && count($subs) > $limite) {
+      return array_slice($subs, 0, $limite, true);
+    }
+
+    return $subs;
   }
 
   /**
@@ -287,7 +345,7 @@ class WebPushService
       'Authorization: vapid t=' . $jwt . ', k=' . $vapidKeys['publicKey']
     ];
 
-    // 6. Enviar petición HTTP POST vía cURL
+    // 6. Enviar petición HTTP POST vía cURL con timeouts optimizados
     $ch = curl_init();
     curl_setopt_array($ch, [
       CURLOPT_URL => $endpoint,
@@ -295,7 +353,8 @@ class WebPushService
       CURLOPT_POSTFIELDS => $cifrado['body'],
       CURLOPT_HTTPHEADER => $headers,
       CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_TIMEOUT => 15,
+      CURLOPT_TIMEOUT => 3,
+      CURLOPT_CONNECTTIMEOUT => 2,
       CURLOPT_SSL_VERIFYPEER => true,
       CURLOPT_HEADER => true
     ]);
@@ -312,6 +371,12 @@ class WebPushService
 
     $responseBody = substr($response, $headerSize);
 
+    // Si el endpoint caducó o ya no existe (404 Not Found o 410 Gone), purgarlo automáticamente
+    if ($httpCode === 404 || $httpCode === 410) {
+      $this->eliminarSuscripcion($endpoint);
+      error_log("Web Push: Suscripción caducada eliminada automáticamente ({$httpCode}): {$endpoint}");
+    }
+
     // Códigos 201 Created (Google/Apple) o 200/202 indican entrega exitosa al broker
     $exitoso = in_array($httpCode, [200, 201, 202], true);
 
@@ -323,6 +388,128 @@ class WebPushService
       'respuesta' => $responseBody ?: 'Mensaje encolado exitosamente por el servicio push.',
       'fecha' => date('Y-m-d H:i:s')
     ];
+  }
+
+  /**
+   * Envía notificaciones Web Push a múltiples suscripciones en paralelo utilizando cURL Multi.
+   * Reduce drásticamente la latencia en comparación con un bucle secuencial, y purga
+   * automáticamente las suscripciones inválidas (HTTP 404 / 410 Gone).
+   *
+   * @param array $subscriptions Lista o mapa de suscripciones.
+   * @param array $payload Datos a enviar.
+   * @return array<string, array> Resultados por endpoint.
+   */
+  public function enviarNotificacionesMulti(array $subscriptions, array $payload): array
+  {
+    if (empty($subscriptions)) {
+      return [];
+    }
+
+    $vapidKeys = $this->obtenerOCrearLlavesVapid();
+    $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $mh = curl_multi_init();
+    $curlHandles = [];
+    $metadata = [];
+
+    foreach ($subscriptions as $sub) {
+      $endpoint = $sub['endpoint'] ?? '';
+      $p256dh = $sub['keys']['p256dh'] ?? '';
+      $auth = $sub['keys']['auth'] ?? '';
+
+      if (empty($endpoint) || empty($p256dh) || empty($auth)) {
+        continue;
+      }
+
+      try {
+        $jwt = $this->generarVapidJwt($endpoint, $vapidKeys);
+        $cifrado = $this->cifrarPayloadRfc8291($payloadJson, $p256dh, $auth);
+
+        $headers = [
+          'Content-Type: application/octet-stream',
+          'Content-Encoding: aes128gcm',
+          'Content-Length: ' . strlen($cifrado['body']),
+          'TTL: 86400',
+          'Urgency: high',
+          'Authorization: vapid t=' . $jwt . ', k=' . $vapidKeys['publicKey']
+        ];
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+          CURLOPT_URL => $endpoint,
+          CURLOPT_POST => true,
+          CURLOPT_POSTFIELDS => $cifrado['body'],
+          CURLOPT_HTTPHEADER => $headers,
+          CURLOPT_RETURNTRANSFER => true,
+          CURLOPT_TIMEOUT => 3,
+          CURLOPT_CONNECTTIMEOUT => 2,
+          CURLOPT_SSL_VERIFYPEER => true,
+          CURLOPT_HEADER => true
+        ]);
+
+        curl_multi_add_handle($mh, $ch);
+        $handleKey = (int) $ch;
+        $curlHandles[$handleKey] = $ch;
+        $metadata[$handleKey] = [
+          'endpoint' => $endpoint,
+          'servicio' => match (true) {
+            str_contains($endpoint, 'fcm.googleapis.com') => 'Google FCM',
+            str_contains($endpoint, 'push.apple.com') => 'Apple APNs',
+            default => 'Web Push'
+          }
+        ];
+      } catch (\Throwable $e) {
+        error_log("Error al preparar Web Push para {$endpoint}: " . $e->getMessage());
+      }
+    }
+
+    if (empty($curlHandles)) {
+      curl_multi_close($mh);
+      return [];
+    }
+
+    // Ejecución paralela no bloqueante
+    $active = null;
+    do {
+      $mrc = curl_multi_exec($mh, $active);
+    } while ($mrc === CURLM_CALL_MULTI_PERFORM);
+
+    while ($active && $mrc === CURLM_OK) {
+      if (curl_multi_select($mh, 0.5) !== -1) {
+        do {
+          $mrc = curl_multi_exec($mh, $active);
+        } while ($mrc === CURLM_CALL_MULTI_PERFORM);
+      }
+    }
+
+    $resultados = [];
+    foreach ($curlHandles as $key => $ch) {
+      $response = curl_multi_getcontent($ch);
+      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      $endpoint = $metadata[$key]['endpoint'];
+      $servicio = $metadata[$key]['servicio'];
+
+      curl_multi_remove_handle($mh, $ch);
+      curl_close($ch);
+
+      $exitoso = in_array($httpCode, [200, 201, 202], true);
+
+      // Si el endpoint caducó o no existe (404 o 410), auto-purgar
+      if ($httpCode === 404 || $httpCode === 410) {
+        $this->eliminarSuscripcion($endpoint);
+        error_log("Web Push Multi: Suscripción caducada eliminada automáticamente ({$httpCode}): {$endpoint}");
+      }
+
+      $resultados[$endpoint] = [
+        'exito' => $exitoso,
+        'http_code' => $httpCode,
+        'servicio' => $servicio,
+        'endpoint' => $endpoint
+      ];
+    }
+
+    curl_multi_close($mh);
+    return $resultados;
   }
 
   /**

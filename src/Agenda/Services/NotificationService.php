@@ -30,12 +30,13 @@ class NotificationService
     public function notificarAdminNuevaCita(Cita $cita, Cliente $cliente, Servicio $servicio): void
     {
         try {
-            $subs = $this->webPushService->obtenerSuscripciones();
+            // Obtener únicamente los dispositivos activos más recientes del terapeuta (máx 5)
+            $subs = $this->webPushService->obtenerSuscripciones(5);
             if (empty($subs)) {
                 error_log("Push Admin: 0 suscripciones activas encontradas.");
                 return;
             }
-            error_log("Push Admin: " . count($subs) . " suscripciones encontradas.");
+            error_log("Push Admin: Despachando a " . count($subs) . " dispositivos activos.");
 
             $horaFormato = DisponibilidadService::formatearHoraAmPm(substr($cita->getHoraInicio(), 0, 5));
             $telefonoTexto = $this->clienteRepo->descifrarTelefono($cliente) ?? 'Sin celular';
@@ -70,13 +71,10 @@ class NotificationService
                 ]
             ];
 
-            foreach ($subs as $sub) {
-                try {
-                    $res = $this->webPushService->enviarNotificacion($sub, $payload);
-                    error_log("Push Admin exitoso a {$sub['endpoint']}: HTTP " . $res['http_code']);
-                } catch (Throwable $e) {
-                    error_log("Aviso: Notificación Web Push a Admin no entregada a endpoint {$sub['endpoint']}: " . $e->getMessage());
-                }
+            // Despacho paralelo ultrarrápido con cURL Multi
+            $res = $this->webPushService->enviarNotificacionesMulti($subs, $payload);
+            foreach ($res as $ep => $info) {
+                error_log("Push Admin a {$ep}: HTTP " . $info['http_code'] . " (" . ($info['exito'] ? 'OK' : 'FAIL') . ")");
             }
         } catch (Throwable $e) {
             error_log("Aviso: Error general al notificar Web Push a Admin: " . $e->getMessage());
