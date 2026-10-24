@@ -50,7 +50,7 @@ class ServicioRepository
   public function obtenerActivos(): array
   {
     $rows = SimpleCache::remember('servicios_activos_raw', 3600, function () {
-      $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+      $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, horario_personalizado, created_at 
               FROM servicios 
               WHERE activo = 1 
               ORDER BY id ASC";
@@ -67,10 +67,17 @@ class ServicioRepository
    */
   public function obtenerTodos(): array
   {
-    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, horario_personalizado, created_at 
             FROM servicios 
             ORDER BY id ASC";
-    return $this->db->fetchAll($sql);
+    $rows = $this->db->fetchAll($sql);
+
+    return array_map(function (array $r): array {
+      if (isset($r['horario_personalizado']) && is_string($r['horario_personalizado'])) {
+        $r['horario_personalizado'] = json_decode($r['horario_personalizado'], true);
+      }
+      return $r;
+    }, $rows);
   }
 
   /**
@@ -82,12 +89,19 @@ class ServicioRepository
   public function obtenerCatalogoArray(): array
   {
     return SimpleCache::remember('servicios_catalogo_array', 3600, function () {
-      $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+      $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, horario_personalizado, created_at 
               FROM servicios 
               WHERE activo = 1 
               ORDER BY id ASC";
 
       return $this->db->fetchAll($sql, [], function (array $r): array {
+        $horarioPersonalizado = null;
+        if (!empty($r['horario_personalizado'])) {
+          $horarioPersonalizado = is_string($r['horario_personalizado'])
+            ? json_decode($r['horario_personalizado'], true)
+            : $r['horario_personalizado'];
+        }
+
         return [
           'id' => (int) $r['id'],
           'nombre' => $r['nombre'],
@@ -96,6 +110,7 @@ class ServicioRepository
           'duracion_minutos' => (int) ($r['duracion_minutos'] ?? 60),
           'precio' => isset($r['precio']) ? (float) $r['precio'] : null,
           'activo' => (int) ($r['activo'] ?? 1),
+          'horario_personalizado' => $horarioPersonalizado,
           'created_at' => $r['created_at'] ?? null,
         ];
       });
@@ -118,7 +133,7 @@ class ServicioRepository
       }
     }
 
-    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, created_at 
+    $sql = "SELECT id, nombre, descripcion, instrucciones, duracion_minutos, precio, activo, horario_personalizado, created_at 
             FROM servicios 
             WHERE id = ? 
             LIMIT 1";
@@ -134,8 +149,12 @@ class ServicioRepository
    */
   public function crear(Servicio $servicio): int
   {
-    $sql = "INSERT INTO servicios (nombre, descripcion, instrucciones, duracion_minutos, precio, activo) 
-            VALUES (?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO servicios (nombre, descripcion, instrucciones, duracion_minutos, precio, activo, horario_personalizado) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+    $horarioJson = $servicio->tieneHorarioPersonalizado()
+      ? json_encode($servicio->getHorarioPersonalizado(), JSON_UNESCAPED_UNICODE)
+      : null;
 
     $this->db->execute($sql, [
       $servicio->getNombre(),
@@ -143,7 +162,8 @@ class ServicioRepository
       $servicio->getInstrucciones(),
       $servicio->getDuracionMinutos(),
       $servicio->getPrecio(),
-      $servicio->isActivo() ? 1 : 0
+      $servicio->isActivo() ? 1 : 0,
+      $horarioJson
     ]);
 
     $id = (int) $this->db->lastInsertId();
@@ -161,8 +181,12 @@ class ServicioRepository
   public function actualizar(Servicio $servicio): bool
   {
     $sql = "UPDATE servicios 
-            SET nombre = ?, descripcion = ?, instrucciones = ?, duracion_minutos = ?, precio = ?, activo = ? 
+            SET nombre = ?, descripcion = ?, instrucciones = ?, duracion_minutos = ?, precio = ?, activo = ?, horario_personalizado = ? 
             WHERE id = ?";
+
+    $horarioJson = $servicio->tieneHorarioPersonalizado()
+      ? json_encode($servicio->getHorarioPersonalizado(), JSON_UNESCAPED_UNICODE)
+      : null;
 
     $actualizado = $this->db->execute($sql, [
       $servicio->getNombre(),
@@ -171,6 +195,7 @@ class ServicioRepository
       $servicio->getDuracionMinutos(),
       $servicio->getPrecio(),
       $servicio->isActivo() ? 1 : 0,
+      $horarioJson,
       $servicio->getId()
     ]) > 0;
 

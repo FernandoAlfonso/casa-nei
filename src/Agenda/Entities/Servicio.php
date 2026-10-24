@@ -32,6 +32,7 @@ class Servicio
     private int $duracionMinutos = 60,
     private ?float $precio = null,
     private bool $activo = true,
+    private ?array $horarioPersonalizado = null,
     private ?string $createdAt = null
   ) {
   }
@@ -191,6 +192,72 @@ class Servicio
   }
 
   /**
+   * Obtiene la configuración de horarios específicos del servicio.
+   *
+   * @return array<int, array<string, mixed>>|null
+   */
+  public function getHorarioPersonalizado(): ?array
+  {
+    return $this->horarioPersonalizado;
+  }
+
+  /**
+   * Establece la configuración de horarios específicos del servicio.
+   *
+   * @param array<int, array<string, mixed>>|null $horarioPersonalizado
+   * @return self
+   */
+  public function setHorarioPersonalizado(?array $horarioPersonalizado): self
+  {
+    $this->horarioPersonalizado = $horarioPersonalizado;
+    return $this;
+  }
+
+  /**
+   * Determina si el servicio cuenta con un horario personalizado que sobrescribe el general.
+   *
+   * @return bool
+   */
+  public function tieneHorarioPersonalizado(): bool
+  {
+    return !empty($this->horarioPersonalizado) && is_array($this->horarioPersonalizado);
+  }
+
+  /**
+   * Devuelve los rangos horarios [['hora_inicio' => '19:00', 'hora_fin' => '21:00']]
+   * para el día de la semana indicado (0=Dom, 1=Lun, ..., 6=Sáb). Si no abre ese día, devuelve [].
+   *
+   * @param int $diaSemana Día de la semana (0 a 6).
+   * @return array<int, array{hora_inicio: string, hora_fin: string}>
+   */
+  public function obtenerRangosPorDia(int $diaSemana): array
+  {
+    if (!$this->tieneHorarioPersonalizado()) {
+      return [];
+    }
+
+    $rangos = [];
+    foreach ($this->horarioPersonalizado as $bloque) {
+      $dias = array_map('intval', $bloque['dias'] ?? []);
+      $coincide = in_array($diaSemana, $dias, true);
+      if (!$coincide && $diaSemana === 0 && in_array(7, $dias, true)) {
+        $coincide = true;
+      }
+      if (!$coincide && $diaSemana === 7 && in_array(0, $dias, true)) {
+        $coincide = true;
+      }
+
+      if ($coincide) {
+        $rangos[] = [
+          'hora_inicio' => (string) ($bloque['hora_inicio'] ?? ''),
+          'hora_fin'    => (string) ($bloque['hora_fin'] ?? '')
+        ];
+      }
+    }
+    return $rangos;
+  }
+
+  /**
    * Obtiene la fecha de creación del registro.
    *
    * @return string|null
@@ -220,14 +287,25 @@ class Servicio
    */
   public static function fromArray(array $data): self
   {
+    $horarioPersonalizado = null;
+    if (isset($data['horario_personalizado']) && $data['horario_personalizado'] !== null && $data['horario_personalizado'] !== '') {
+      $horarioPersonalizado = is_string($data['horario_personalizado'])
+        ? json_decode($data['horario_personalizado'], true)
+        : $data['horario_personalizado'];
+      if (!is_array($horarioPersonalizado)) {
+        $horarioPersonalizado = null;
+      }
+    }
+
     return new self(
       id: isset($data['id']) ? (int) $data['id'] : null,
       nombre: $data['nombre'] ?? '',
       descripcion: $data['descripcion'] ?? null,
       instrucciones: $data['instrucciones'] ?? null,
       duracionMinutos: (int) ($data['duracion_minutos'] ?? 60),
-      precio: isset($data['precio']) ? (float) $data['precio'] : null,
+      precio: isset($data['precio']) && $data['precio'] !== null && $data['precio'] !== '' ? (float) $data['precio'] : null,
       activo: isset($data['activo']) ? (bool) $data['activo'] : true,
+      horarioPersonalizado: $horarioPersonalizado,
       createdAt: $data['created_at'] ?? null
     );
   }
@@ -247,6 +325,7 @@ class Servicio
       'duracion_minutos' => $this->duracionMinutos,
       'precio' => $this->precio,
       'activo' => $this->activo ? 1 : 0,
+      'horario_personalizado' => $this->horarioPersonalizado,
       'created_at' => $this->createdAt,
     ];
   }

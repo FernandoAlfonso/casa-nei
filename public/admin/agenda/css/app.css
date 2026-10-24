@@ -1053,3 +1053,178 @@ main#app-root {
   font-size: 0.88rem;
   color: var(--text-muted);
 }
+
+/* ============================================================
+ * Módulo de Horario Específico por Servicio (Mobile-First)
+ * ============================================================ */
+.schedule-override-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--bg-card-subtle, #edf2eb);
+  border: 1px solid var(--border, #d4ded1);
+}
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: 12px;
+  user-select: none;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-main, #19241c);
+}
+
+.toggle-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted, #5e6d63);
+  margin-top: 2px;
+}
+
+.toggle-switch {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--primary, #15803d);
+}
+
+.custom-schedule-container.hidden {
+  display: none !important;
+}
+
+.schedule-block-item {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light, #e2eae0);
+}
+
+.day-pills-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.day-pill {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #d4ded1);
+  background: var(--bg-card, #f8faf7);
+  color: var(--text-main, #19241c);
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.day-pill.active {
+  background: var(--primary, #15803d);
+  border-color: var(--primary, #15803d);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(21, 128, 61, 0.25);
+}
+
+.time-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.time-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.time-field label {
+  font-size: 0.85rem;
+  color: var(--text-muted, #5e6d63);
+  font-weight: 500;
+}
+
+.time-field input[type="time"] {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border, #d4ded1);
+  background: var(--bg-card, #f8faf7);
+  font-size: 0.9rem;
+  color: var(--text-main, #19241c);
+  box-sizing: border-box;
+}
+
+.btn-remove-block {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border, #d4ded1);
+  background: var(--bg-card, #f8faf7);
+  color: var(--btn-orange-bg, #c2410c);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-block:hover {
+  background: rgba(194, 65, 12, 0.12);
+  border-color: var(--btn-orange-bg, #c2410c);
+}
+
+.btn-link-sm {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--primary, #15803d);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+}
+
+.service-schedule-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+
+.service-schedule-badge.is-general {
+  background: var(--bg-hover, #e5ebe2);
+  color: var(--text-muted, #5e6d63);
+}
+
+.service-schedule-badge.is-custom {
+  background: rgba(21, 128, 61, 0.12);
+  color: var(--primary-dark, #166534);
+  border: 1px solid rgba(21, 128, 61, 0.25);
+  font-weight: 600;
+}

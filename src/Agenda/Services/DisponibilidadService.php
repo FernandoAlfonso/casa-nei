@@ -5,6 +5,7 @@ namespace App\Agenda\Services;
 use App\Agenda\Entities\BloqueoAgenda;
 use App\Agenda\Entities\EstadoCita;
 use App\Agenda\Entities\HorarioAtencion;
+use App\Agenda\Entities\Servicio;
 use App\Agenda\Repositories\CitaRepository;
 use App\Agenda\Repositories\HorarioRepository;
 use App\Agenda\Repositories\ServicioRepository;
@@ -93,7 +94,8 @@ class DisponibilidadService
     $bloqueosPorFecha = $datos['bloqueos_por_fecha'];
     $citasPorFecha = $datos['citas_por_fecha'];
 
-    $duracionMinutos = $this->resolverDuracionServicio($servicioId);
+    $servicio = $servicioId !== null ? $this->servicioRepo->buscarPorId($servicioId) : null;
+    $duracionMinutos = $servicio ? $servicio->getDuracionMinutos() : $this->resolverDuracionServicio($servicioId);
 
     $periodo = new DatePeriod($inicio, new DateInterval('P1D'), (clone $fin)->modify('+1 day'));
     $calendario = [];
@@ -102,13 +104,18 @@ class DisponibilidadService
       $fechaStr = $fechaObj->format('Y-m-d');
       $diaSemana = (int) $fechaObj->format('w'); // 0=Domingo, 1=Lunes, etc.
 
-      // 1. Validar si el centro abre ese día de la semana
-      if (!isset($horariosSemanales[$diaSemana])) {
+      // 1. Determinar turnos del día aplicando herencia con sobrescritura
+      $horariosDia = $this->resolverTurnosDia($diaSemana, $servicio, $horariosSemanales);
+      if (empty($horariosDia)) {
+        $motivoCerrado = ($servicio !== null && $servicio->tieneHorarioPersonalizado())
+          ? 'Servicio no disponible este día'
+          : 'Día no laboral';
+
         $calendario[$fechaStr] = $this->construirDatosDia(
           $fechaStr,
           $diaSemana,
           'cerrado',
-          'Día no laboral',
+          $motivoCerrado,
           0,
           false,
           $conSlots,
@@ -116,8 +123,6 @@ class DisponibilidadService
         );
         continue;
       }
-
-      $horariosDia = $horariosSemanales[$diaSemana];
       $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
       $bloqueoCompleto = $this->buscarBloqueoCompleto($bloqueosDia);
 
@@ -296,7 +301,8 @@ class DisponibilidadService
     bool $conSlots = false
   ): array {
     $inicio = new DateTime($fechaDesde ?? 'today');
-    $duracionMinutos = $this->resolverDuracionServicio($servicioId);
+    $servicio = $servicioId !== null ? $this->servicioRepo->buscarPorId($servicioId) : null;
+    $duracionMinutos = $servicio ? $servicio->getDuracionMinutos() : $this->resolverDuracionServicio($servicioId);
 
     $diasEncontrados = [];
     $cursor = clone $inicio;
@@ -327,12 +333,12 @@ class DisponibilidadService
         $fechaStr = $fechaObj->format('Y-m-d');
         $diaSemana = (int) $fechaObj->format('w'); // 0=Domingo, 1=Lunes, ..., 6=Sábado
 
-        // 1. Omitir si el negocio no abre ese día de la semana (ej. domingos)
-        if (!isset($horariosSemanales[$diaSemana])) {
+        // 1. Omitir si el negocio o servicio no opera ese día de la semana
+        $horariosDia = $this->resolverTurnosDia($diaSemana, $servicio, $horariosSemanales);
+        if (empty($horariosDia)) {
           continue;
         }
 
-        $horariosDia = $horariosSemanales[$diaSemana];
         $bloqueosDia = $bloqueosPorFecha[$fechaStr] ?? [];
 
         // 2. Omitir si hay un bloqueo de día completo (ej. festivos, vacaciones)
@@ -401,14 +407,34 @@ class DisponibilidadService
     $fechaObj = new DateTime($fecha);
     $diaSemana = (int) $fechaObj->format('w');
 
-    $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
-    if (empty($horariosDia)) {
-      return [];
-    }
-
+    // 1. Validar bloqueos generales (vacaciones, días festivos aplican a todos los servicios)
     $bloqueos = $this->horarioRepo->obtenerBloqueosEnRango($fecha, $fecha);
     if ($this->buscarBloqueoCompleto($bloqueos) !== null) {
       return [];
+    }
+
+    // 2. Herencia con Sobrescritura: ¿Tiene horario personalizado?
+    if ($servicio->tieneHorarioPersonalizado()) {
+      $rangos = $servicio->obtenerRangosPorDia($diaSemana);
+      if (empty($rangos)) {
+        return [];
+      }
+      $horariosDia = array_map(function (array $r) use ($diaSemana): HorarioAtencion {
+        $inicio = strlen($r['hora_inicio']) === 5 ? $r['hora_inicio'] . ':00' : $r['hora_inicio'];
+        $fin = strlen($r['hora_fin']) === 5 ? $r['hora_fin'] . ':00' : $r['hora_fin'];
+        return new HorarioAtencion(
+          id: null,
+          diaSemana: $diaSemana,
+          horaInicio: $inicio,
+          horaFin: $fin,
+          activo: true
+        );
+      }, $rangos);
+    } else {
+      $horariosDia = $this->horarioRepo->obtenerPorDiaSemana($diaSemana);
+      if (empty($horariosDia)) {
+        return [];
+      }
     }
 
     $citas = $this->citaRepo->obtenerPorRangoFechas($fecha, $fecha, [
@@ -429,6 +455,41 @@ class DisponibilidadService
       $todosSlots = array_merge($todosSlots, $slotsTurno);
     }
     return $todosSlots;
+  }
+
+  /**
+   * Resuelve los turnos de atención para un día de la semana y servicio dado,
+   * aplicando la regla de herencia con sobrescritura (horario personalizado vs general).
+   *
+   * @param int $diaSemana Día de la semana (0 a 6).
+   * @param Servicio|null $servicio Entidad de servicio (si aplica).
+   * @param array<int, array<int, HorarioAtencion>> $horariosSemanales Horarios generales indexados por día.
+   * @return HorarioAtencion[] Lista de turnos para el día o arreglo vacío si está cerrado.
+   */
+  private function resolverTurnosDia(
+    int $diaSemana,
+    ?Servicio $servicio,
+    array $horariosSemanales
+  ): array {
+    if ($servicio !== null && $servicio->tieneHorarioPersonalizado()) {
+      $rangos = $servicio->obtenerRangosPorDia($diaSemana);
+      if (empty($rangos)) {
+        return [];
+      }
+      return array_map(function (array $r) use ($diaSemana): HorarioAtencion {
+        $inicio = strlen($r['hora_inicio']) === 5 ? $r['hora_inicio'] . ':00' : $r['hora_inicio'];
+        $fin = strlen($r['hora_fin']) === 5 ? $r['hora_fin'] . ':00' : $r['hora_fin'];
+        return new HorarioAtencion(
+          id: null,
+          diaSemana: $diaSemana,
+          horaInicio: $inicio,
+          horaFin: $fin,
+          activo: true
+        );
+      }, $rangos);
+    }
+
+    return $horariosSemanales[$diaSemana] ?? [];
   }
 
   /**

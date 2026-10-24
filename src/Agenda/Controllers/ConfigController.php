@@ -55,14 +55,17 @@ class ConfigController
   public function crearServicio(Request $request): void
   {
     try {
+      $horarioPersonalizado = $this->sanitizarHorarioPersonalizado($request->get('horario_personalizado'));
+
       $servicio = new Servicio(
         id: 0,
         nombre: (string) $request->get('nombre', ''),
         descripcion: $request->get('descripcion'),
         instrucciones: $request->get('instrucciones'),
         duracionMinutos: (int) $request->get('duracion_minutos', 60),
-        precio: $request->get('precio') ? (float) $request->get('precio') : null,
-        activo: (bool) $request->get('activo', true)
+        precio: $request->get('precio') !== null && $request->get('precio') !== '' ? (float) $request->get('precio') : null,
+        activo: (bool) $request->get('activo', true),
+        horarioPersonalizado: $horarioPersonalizado
       );
 
       $id = $this->servicioRepo->crear($servicio);
@@ -80,14 +83,17 @@ class ConfigController
         Response::error("ID de servicio requerido", 400);
       }
 
+      $horarioPersonalizado = $this->sanitizarHorarioPersonalizado($request->get('horario_personalizado'));
+
       $servicio = new Servicio(
         id: $id,
         nombre: (string) $request->get('nombre', ''),
         descripcion: $request->get('descripcion'),
         instrucciones: $request->get('instrucciones'),
         duracionMinutos: (int) $request->get('duracion_minutos', 60),
-        precio: $request->get('precio') ? (float) $request->get('precio') : null,
-        activo: (bool) $request->get('activo', true)
+        precio: $request->get('precio') !== null && $request->get('precio') !== '' ? (float) $request->get('precio') : null,
+        activo: (bool) $request->get('activo', true),
+        horarioPersonalizado: $horarioPersonalizado
       );
 
       $this->servicioRepo->actualizar($servicio);
@@ -95,6 +101,60 @@ class ConfigController
     } catch (Throwable $e) {
       Response::error("Error al actualizar servicio: " . $e->getMessage(), 500);
     }
+  }
+
+  /**
+   * Valida y sanitiza la estructura del bloque horario_personalizado.
+   *
+   * @param mixed $rawHorario
+   * @return array<int, array{dias: int[], hora_inicio: string, hora_fin: string}>|null
+   */
+  private function sanitizarHorarioPersonalizado(mixed $rawHorario): ?array
+  {
+    if (is_string($rawHorario)) {
+      $rawHorario = json_decode($rawHorario, true);
+    }
+
+    if (empty($rawHorario) || !is_array($rawHorario)) {
+      return null;
+    }
+
+    $bloquesLimpios = [];
+    foreach ($rawHorario as $bloque) {
+      if (!is_array($bloque)) {
+        continue;
+      }
+
+      $diasRaw = is_array($bloque['dias'] ?? null) ? $bloque['dias'] : [];
+      $diasValidos = [];
+      foreach ($diasRaw as $d) {
+        if (is_numeric($d)) {
+          $val = (int) $d;
+          if ($val >= 0 && $val <= 7) {
+            $diasValidos[] = $val;
+          }
+        }
+      }
+      $dias = array_values(array_unique($diasValidos));
+      sort($dias);
+
+      $inicio = trim((string) ($bloque['hora_inicio'] ?? ''));
+      $fin    = trim((string) ($bloque['hora_fin'] ?? ''));
+
+      if (!empty($dias) && preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $inicio) && preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $fin)) {
+        $inicioCorta = substr($inicio, 0, 5);
+        $finCorta = substr($fin, 0, 5);
+        if ($inicioCorta < $finCorta) {
+          $bloquesLimpios[] = [
+            'dias'        => $dias,
+            'hora_inicio' => $inicioCorta,
+            'hora_fin'    => $finCorta
+          ];
+        }
+      }
+    }
+
+    return !empty($bloquesLimpios) ? $bloquesLimpios : null;
   }
 
   // ==========================================
