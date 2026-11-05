@@ -18,8 +18,8 @@
  * @module views/HomeView
  */
 
-import ApiService from '../services/api.js';
-import Modal from '../services/modal.js';
+import ApiService from '../services/api.js?v=20261021-e8ee3f';
+import Modal from '../services/modal.js?v=20261105-465a93';
 import {
   iconCheckCircleFill,
   iconXCircleFill,
@@ -29,7 +29,7 @@ import {
   iconCalendar3,
   iconClockFill,
   iconExclamationTriangleFill
-} from '../icons.js';
+} from '../icons.js?v=20261022-2be38e';
 
 /**
  * Escapa caracteres HTML para prevenir inyecciones XSS.

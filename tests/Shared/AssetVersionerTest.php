@@ -141,4 +141,36 @@ class AssetVersionerTest extends TestCase
 
         $this->assertTrue($versionA !== $versionB, "Modificar un submódulo importado debe invalidar el hash del entry point.");
     }
+
+    /**
+     * Valida que versionFile inyecte ?v=HASH en los imports relativos dentro de módulos JS
+     * y en etiquetas <link rel="modulepreload">.
+     */
+    public function testVersionJsModuleTreeAndModulepreload(): void
+    {
+        $versioner = new AssetVersioner($this->tempPublic, '/casa-nei');
+
+        $mainJs = $this->tempPublic . '/js/main.js';
+        $componentJs = $this->tempPublic . '/js/component.js';
+        $htmlFile = $this->tempPublic . '/index.html';
+
+        file_put_contents($componentJs, 'export const val = 42;');
+        file_put_contents($mainJs, "import { val } from './component.js';\nconsole.log(val);");
+        file_put_contents($htmlFile, '<link rel="modulepreload" href="js/component.js"><script type="module" src="js/main.js"></script>');
+
+        $versioner->versionFile($htmlFile);
+
+        $updatedMainJs = file_get_contents($mainJs);
+        $updatedHtml = file_get_contents($htmlFile);
+        $expectedComponentVer = $versioner->computeAssetVersion($componentJs);
+
+        $this->assertTrue(
+            str_contains($updatedMainJs, "./component.js?v={$expectedComponentVer}"),
+            "El import relativo dentro de main.js debe incluir el parámetro ?v= del submódulo."
+        );
+        $this->assertTrue(
+            str_contains($updatedHtml, "js/component.js?v={$expectedComponentVer}"),
+            "El enlace modulepreload debe actualizar su parámetro ?v=."
+        );
+    }
 }

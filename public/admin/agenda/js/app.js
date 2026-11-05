@@ -7,18 +7,18 @@
  * @module app
  */
 
-import Router from './router.js';
-import LoginView from './views/LoginView.js';
-import HomeView from './views/HomeView.js';
-import CalendarView from './views/CalendarView.js';
-import SettingsView from './views/SettingsView.js';
-import NewCitaView from './views/NewCitaView.js';
-import PushService from './services/push.js';
-import SolicitudDetalleView from './views/SolicitudDetalleView.js';
+import Router from './router.js?v=20261021-5767c6';
+import LoginView from './views/LoginView.js?v=20261105-29d1d9';
+import HomeView from './views/HomeView.js?v=20261105-282395';
+import CalendarView from './views/CalendarView.js?v=20261105-e4b13d';
+import SettingsView from './views/SettingsView.js?v=20261105-7aee3b';
+import NewCitaView from './views/NewCitaView.js?v=20261105-b94430';
+import PushService from './services/push.js?v=20261105-5d7596';
+import SolicitudDetalleView from './views/SolicitudDetalleView.js?v=20261105-8bd0d5';
 
-import ServicesView from './views/config/ServicesView.js';
-import HorariosView from './views/config/HorariosView.js';
-import BloqueosView from './views/config/BloqueosView.js';
+import ServicesView from './views/config/ServicesView.js?v=20261105-607600';
+import HorariosView from './views/config/HorariosView.js?v=20261105-8b89b2';
+import BloqueosView from './views/config/BloqueosView.js?v=20261105-8b8ffa';
 
 // Definición del mapa de rutas de la aplicación
 const routes = {

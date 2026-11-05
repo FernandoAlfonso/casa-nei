@@ -77,6 +77,10 @@ class AssetVersioner
         }
 
         $originalContent = file_get_contents($htmlFilePath);
+
+        // Primero sincronizar recursivamente los imports internos de los módulos JS referenciados
+        $this->versionHtmlModuleImports($originalContent, $htmlFilePath, $forcedVersion, $dryRun);
+
         $result = $this->processHtmlContent($originalContent, $htmlFilePath, $forcedVersion);
 
         if ($result['modified'] && !$dryRun) {
@@ -104,9 +108,9 @@ class AssetVersioner
         $assetsTracked = [];
         $modified = false;
 
-        // 1. Procesar etiquetas <link rel="stylesheet">
+        // 1. Procesar etiquetas <link rel="stylesheet"> y <link rel="modulepreload">
         // Maneja formatos con rel antes o después de href
-        $linkPattern = '/<link\b(?=[^>]*\srel=["\']stylesheet["\'])(?=[^>]*\shref=["\']([^"\']+)["\'])[^>]*>/i';
+        $linkPattern = '/<link\b(?=[^>]*\srel=["\'](?:stylesheet|modulepreload)["\'])(?=[^>]*\shref=["\']([^"\']+)["\'])[^>]*>/i';
         $html = preg_replace_callback($linkPattern, function ($matches) use ($htmlFilePath, $forcedVersion, &$assetsTracked, &$modified) {
             $fullTag = $matches[0];
             $href = $matches[1];
@@ -258,6 +262,114 @@ class AssetVersioner
     }
 
     /**
+     * Sincroniza recursivamente los parámetros ?v= en las declaraciones import de los scripts locales de un HTML.
+     *
+     * @param string $html Contenido HTML.
+     * @param string $htmlFilePath Ruta del archivo HTML.
+     * @param string|null $forcedVersion Versión forzada opcional.
+     * @param bool $dryRun Si es true, no escribe cambios en disco.
+     * @return void
+     */
+    private function versionHtmlModuleImports(
+        string $html,
+        string $htmlFilePath,
+        ?string $forcedVersion = null,
+        bool $dryRun = false
+    ): void {
+        $scriptPattern = '/<script\b(?=[^>]*\ssrc=["\']([^"\']+)["\'])[^>]*>/i';
+        if (!preg_match_all($scriptPattern, $html, $matches)) {
+            return;
+        }
+
+        $visitedJs = [];
+        foreach ($matches[1] as $src) {
+            $diskPath = $this->resolveAssetDiskPath($src, $htmlFilePath);
+            if ($diskPath !== null && file_exists($diskPath)) {
+                $this->versionJsModuleTree($diskPath, $forcedVersion, $dryRun, $visitedJs);
+            }
+        }
+    }
+
+    /**
+     * Recorre en post-orden el árbol de módulos ES y actualiza los especificadores de importación relativos con ?v=HASH.
+     *
+     * @param string $jsFilePath Ruta absoluta al archivo JS en disco.
+     * @param string|null $forcedVersion Versión forzada opcional.
+     * @param bool $dryRun Si es true, no modifica el archivo en disco.
+     * @param array $visited Mapa de archivos ya procesados para prevenir ciclos.
+     * @return void
+     */
+    public function versionJsModuleTree(
+        string $jsFilePath,
+        ?string $forcedVersion = null,
+        bool $dryRun = false,
+        array &$visited = []
+    ): void {
+        $realPath = realpath($jsFilePath);
+        if (!$realPath || isset($visited[$realPath]) || !file_exists($realPath)) {
+            return;
+        }
+
+        $visited[$realPath] = true;
+        $ext = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
+        if (!in_array($ext, ['js', 'mjs'])) {
+            return;
+        }
+
+        $content = file_get_contents($realPath);
+        $currentDir = dirname($realPath);
+
+        // Limpiar cualquier ?v= que pudiera haberse insertado dentro de anotaciones JSDoc {import('./...')}
+        $jsdocCleanupRegex = '/([<{]\s*import\s*\(\s*[\'"]\.{1,2}\/[^\'"]+?\.m?js)\?[^\'"]*([\'"]\s*\))/i';
+        $cleanedContent = preg_replace($jsdocCleanupRegex, '$1$2', $content) ?? $content;
+        $jsdocCleaned = ($cleanedContent !== $content);
+        $content = $cleanedContent;
+
+        // Solo coincidir con sentencias import reales de ES Modules (excluyendo {import(...)} y <import(...)> de JSDoc)
+        $importRegex = '/((?<![{<])\b(?:import\s+[^;]*?\bfrom\s*|import\s*\()\s*[\'"])(\.{1,2}\/[^\'"]+?\.m?js)(?:\?[^\'"]*)?([\'"])/i';
+
+        // 1. Procesar recursivamente las dependencias hijas primero
+        if (preg_match_all($importRegex, $content, $matches)) {
+            foreach ($matches[2] as $cleanRelImport) {
+                $childPath = $currentDir . '/' . $cleanRelImport;
+                $this->versionJsModuleTree($childPath, $forcedVersion, $dryRun, $visited);
+            }
+        }
+
+        // 2. Reemplazar cada import relativo con la versión calculada del módulo hijo
+        $modified = $jsdocCleaned;
+        $updatedContent = preg_replace_callback(
+            $importRegex,
+            function ($m) use ($currentDir, $forcedVersion, &$modified) {
+                $prefix = $m[1];
+                $cleanRelImport = $m[2];
+                $quoteEnd = $m[3];
+                $fullMatch = $m[0];
+
+                $childDiskPath = realpath($currentDir . '/' . $cleanRelImport);
+                if (!$childDiskPath || !file_exists($childDiskPath)) {
+                    return $fullMatch;
+                }
+
+                $version = $forcedVersion !== null && trim($forcedVersion) !== ''
+                    ? trim($forcedVersion)
+                    : $this->computeAssetVersion($childDiskPath);
+
+                $replacement = "{$prefix}{$cleanRelImport}?v={$version}{$quoteEnd}";
+                if ($replacement !== $fullMatch) {
+                    $modified = true;
+                }
+                return $replacement;
+            },
+            $content
+        );
+
+        if ($modified && !$dryRun && $updatedContent !== null) {
+            file_put_contents($realPath, $updatedContent);
+        }
+    }
+
+    /**
      * Recolecta recursivamente dependencias de archivos JavaScript (módulos ES).
      *
      * @param string $filePath Archivo actual a examinar.
@@ -283,21 +395,26 @@ class AssetVersioner
         }
 
         $content = file_get_contents($realPath);
-        $combinedHashes[] = md5($content);
 
-        // Si es archivo JavaScript, buscar declaraciones import relativas
+        // Si es archivo JavaScript, buscar declaraciones import relativas (con o sin ?v=...)
         $ext = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
         if (in_array($ext, ['js', 'mjs'])) {
             $currentDir = dirname($realPath);
-            // Captura: import ... from './path.js' o import('./path.js')
-            $importRegex = '/(?:import\s+[^;]*?from\s*|import\s*\()\s*[\'"](\.{1,2}\/[^\'"]+\.js)[\'"]/i';
+            $importRegex = '/((?<![{<])\b(?:import\s+[^;]*?\bfrom\s*|import\s*\()\s*[\'"])(\.{1,2}\/[^\'"]+?\.m?js)(?:\?[^\'"]*)?([\'"])/i';
+
+            // Normalizar especificadores de importación sin ?v= antes de calcular el hash MD5
+            // para que el hash dependa únicamente del código real del módulo
+            $normalizedContent = preg_replace($importRegex, '$1$2$3', $content) ?? $content;
+            $combinedHashes[] = md5($normalizedContent);
 
             if (preg_match_all($importRegex, $content, $matches)) {
-                foreach ($matches[1] as $relativeImport) {
+                foreach ($matches[2] as $relativeImport) {
                     $importedPath = $currentDir . '/' . $relativeImport;
                     $this->collectAssetDependencies($importedPath, $visited, $maxMtime, $combinedHashes);
                 }
             }
+        } else {
+            $combinedHashes[] = md5($content);
         }
     }
 

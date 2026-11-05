@@ -22,7 +22,7 @@ if (str_starts_with($uri, '/api')) {
 
 // Si la ruta inicia con /descarga/, mostrar la vista de descarga (Pretty URL local)
 if (str_starts_with($uri, '/descarga/')) {
-    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Cache-Control: no-cache, max-age=0, must-revalidate");
     header("Pragma: no-cache");
     header("Expires: 0");
     require __DIR__ . '/public/descarga.html';
@@ -41,7 +41,7 @@ if ($uri === '/' || is_dir($publicFile)) {
 
     $targetHtml = is_dir($publicFile) ? rtrim($publicFile, '/') . '/index.html' : __DIR__ . '/public/index.html';
     if (file_exists($targetHtml)) {
-        header("Cache-Control: no-cache, no-store, must-revalidate");
+        header("Cache-Control: no-cache, max-age=0, must-revalidate");
         header("Pragma: no-cache");
         header("Expires: 0");
         header("Content-Type: text/html; charset=UTF-8");
@@ -56,7 +56,7 @@ if (file_exists($publicFile) && !is_dir($publicFile)) {
 
     // Archivos HTML estáticos directos
     if (in_array($extension, ['html', 'htm'])) {
-        header("Cache-Control: no-cache, no-store, must-revalidate");
+        header("Cache-Control: no-cache, max-age=0, must-revalidate");
         header("Pragma: no-cache");
         header("Expires: 0");
         header("Content-Type: text/html; charset=UTF-8");

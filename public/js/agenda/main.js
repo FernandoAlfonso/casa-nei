@@ -4,24 +4,25 @@
  * @module main
  */
 
-import { AgendaApi, getApiBase } from './api.js';
-import { AgendaStore } from './store.js';
-import { renderStepsBar, attachStepsBarListeners } from './components/stepsBar.js';
-import { renderServicesView, attachServicesListeners } from './components/servicesView.js';
-import { renderCalendarView, attachCalendarListeners } from './components/calendarView.js';
-import { renderHoursView, attachHoursListeners } from './components/hoursView.js';
-import { renderFormView, attachFormListeners } from './components/formView.js';
-import { renderSuccessView, attachSuccessListeners } from './components/successView.js';
-import { escapeHtml } from './utils/sanitizer.js';
-import { scrollToAgendaTop, initAgendaAnchorLinks } from './utils/scroll.js';
-import { initNavbarScroll } from './utils/navbar.js';
+import { AgendaApi, getApiBase } from './api.js?v=20261105-cfb423';
+import { AgendaStore } from './store.js?v=20261105-d2a017';
+import { renderStepsBar, attachStepsBarListeners } from './components/stepsBar.js?v=20260903-6fc36d';
+import { renderServicesView, attachServicesListeners } from './components/servicesView.js?v=20261105-f9738f';
+import { renderCalendarView, attachCalendarListeners } from './components/calendarView.js?v=20261105-3b3fe5';
+import { renderHoursView, attachHoursListeners } from './components/hoursView.js?v=20261105-679b37';
+import { renderFormView, attachFormListeners } from './components/formView.js?v=20261105-27032d';
+import { renderSuccessView, attachSuccessListeners } from './components/successView.js?v=20261105-03943f';
+import { escapeHtml, sanitizePhone } from './utils/sanitizer.js?v=20261105-598836';
+import { scrollToAgendaTop, initAgendaAnchorLinks } from './utils/scroll.js?v=20260911-4771ca';
+import { initNavbarScroll } from './utils/navbar.js?v=20260911-f94990';
 
 export class AgendaApp {
   /**
    * @param {string} containerId - ID del contenedor DOM de la agenda.
    * @param {string} [apiBase] - Ruta base de la API REST (por defecto detectada con getApiBase()).
+   * @param {Promise<import('./api.js').Servicio[]>|null} [initialServiciosPromise=null] - Promesa temprana de servicios.
    */
-  constructor(containerId = 'agenda-flow-container', apiBase = getApiBase()) {
+  constructor(containerId = 'agenda-flow-container', apiBase = getApiBase(), initialServiciosPromise = null) {
     this.container = document.getElementById(containerId);
     if (!this.container) {
       console.warn(`[AgendaApp] No se encontró el contenedor con ID "${containerId}".`);
@@ -30,6 +31,7 @@ export class AgendaApp {
 
     this.api = new AgendaApi(apiBase);
     this.store = new AgendaStore();
+    this._initialServiciosPromise = initialServiciosPromise;
 
     // Suscribirse a cambios del almacén de estado para re-renderizar
     this.store.subscribe((state) => this.render(state));
@@ -44,7 +46,9 @@ export class AgendaApp {
   async init() {
     this.renderLoading('Cargando servicios de Casa Nei...');
     try {
-      const servicios = await this.api.obtenerServicios();
+      const promise = this._initialServiciosPromise || this.api.obtenerServicios();
+      this._initialServiciosPromise = null;
+      const servicios = await promise;
       if (servicios && servicios.length > 0) {
         this.store.setServicios(servicios);
       } else {
@@ -94,7 +98,8 @@ export class AgendaApp {
           state.servicioSeleccionado,
           state.calendario,
           state.fechaSeleccionada,
-          state.cargandoMasDias
+          state.cargandoMasDias,
+          state.error
         );
         break;
 
@@ -104,7 +109,8 @@ export class AgendaApp {
           state.fechaSeleccionada,
           state.horasDisponibles,
           state.horaSeleccionada,
-          state.loading
+          state.loading,
+          state.error
         );
         break;
 
@@ -165,7 +171,12 @@ export class AgendaApp {
             this.store.setStep(1);
             scrollToAgendaTop('agenda-flow-container');
           },
-          () => this.handleCargarSiguientesDias()
+          () => this.handleCargarSiguientesDias(),
+          () => {
+            if (state.servicioSeleccionado) {
+              this.handleSelectServicio(state.servicioSeleccionado);
+            }
+          }
         );
         break;
 
@@ -177,6 +188,11 @@ export class AgendaApp {
           () => {
             this.store.setStep(2);
             scrollToAgendaTop('agenda-flow-container');
+          },
+          () => {
+            if (state.fechaSeleccionada) {
+              this.handleSelectFecha(state.fechaSeleccionada);
+            }
           }
         );
         break;
@@ -251,6 +267,7 @@ export class AgendaApp {
       }
     }
 
+    this.store.setError(null);
     this.store.setCargandoMasDias(true);
 
     try {
@@ -268,6 +285,7 @@ export class AgendaApp {
     } catch (err) {
       console.error('[AgendaApp] Error al cargar siguientes días:', err);
       this.store.setCargandoMasDias(false);
+      this.store.setError(err.message || 'No se pudieron consultar los siguientes días. Revisa tu conexión e intenta de nuevo.');
     }
   }
 
@@ -329,13 +347,14 @@ export class AgendaApp {
 
   /**
    * Consulta si el teléfono ya está registrado para precargar los datos del cliente.
-   * Muestra un loader visual explícito y temporalmente mantiene el campo de nombre en espera
-   * para evitar que el usuario comience a escribir y sus datos se sobreescriban de repente.
+   * No bloquea el campo de nombre en conexiones lentas para permitir escribir sin espera,
+   * y valida que el teléfono siga coincidiendo antes de aplicar la respuesta.
    * @param {string} telefono - 10 dígitos limpios o cadena vacía para resetear
    */
   async handlePhoneLookup(telefono) {
     const lookupBox = this.container.querySelector('#cliente-lookup-box');
     const infoBox = this.container.querySelector('#cliente-reconocido-box');
+    const inputTelefono = this.container.querySelector('#paciente_telefono');
     const inputNombre = this.container.querySelector('#paciente_nombre');
     const phoneSpinner = this.container.querySelector('#telefono-spinner');
     const nameSpinner = this.container.querySelector('#nombre-spinner');
@@ -358,7 +377,9 @@ export class AgendaApp {
       return;
     }
 
-    // Activar estado visible de búsqueda
+    const clientePrevio = this.store.getState().cliente;
+
+    // Activar estado visible de búsqueda sin bloquear la escritura en servidores lentos
     if (phoneSpinner) phoneSpinner.style.display = 'inline-block';
     if (lookupBox) {
       lookupBox.innerHTML = `
@@ -374,17 +395,20 @@ export class AgendaApp {
     }
     if (infoBox) infoBox.style.display = 'none';
 
-    // Si el campo de nombre está vacío o no ha sido modificado, indicar que se está buscando
-    const nombreActual = inputNombre ? inputNombre.value.trim() : '';
-    if (inputNombre && !nombreActual) {
-      inputNombre.readOnly = true;
-      inputNombre.classList.add('field-searching');
-      inputNombre.placeholder = 'Buscando si ya estás registrado...';
+    const nombreAntesDeBuscar = inputNombre ? inputNombre.value.trim() : '';
+    if (inputNombre && !nombreAntesDeBuscar) {
+      inputNombre.placeholder = 'Buscando tu registro (o escribe tu nombre)...';
       if (nameSpinner) nameSpinner.style.display = 'inline-block';
     }
 
     try {
       const cliente = await this.api.consultarCliente(telefono);
+
+      // Salvaguarda contra condición de carrera: verificar que el teléfono actual siga siendo el consultado
+      const telefonoActual = inputTelefono ? sanitizePhone(inputTelefono.value) : telefono;
+      if (telefonoActual !== telefono) {
+        return;
+      }
 
       // Ocultar spinners
       if (phoneSpinner) phoneSpinner.style.display = 'none';
@@ -400,9 +424,14 @@ export class AgendaApp {
           inputNombre.readOnly = false;
           inputNombre.classList.remove('field-searching');
           inputNombre.placeholder = 'Nombre y Apellidos';
-          inputNombre.value = cliente.nombre_completo;
-          inputNombre.classList.add('field-prefilled');
-          setTimeout(() => inputNombre.classList.remove('field-prefilled'), 2000);
+          const valorActualNombre = inputNombre.value.trim();
+          const eraDeClientePrevio = clientePrevio && valorActualNombre === clientePrevio.nombre_completo;
+          // Precargar si el usuario no escribió otro nombre manualmente mientras esperaba al servidor
+          if (!valorActualNombre || eraDeClientePrevio) {
+            inputNombre.value = cliente.nombre_completo;
+            inputNombre.classList.add('field-prefilled');
+            setTimeout(() => inputNombre.classList.remove('field-prefilled'), 2000);
+          }
         }
         if (infoBox) {
           infoBox.innerHTML = `
@@ -418,7 +447,10 @@ export class AgendaApp {
           inputNombre.readOnly = false;
           inputNombre.classList.remove('field-searching');
           inputNombre.placeholder = 'Nombre y Apellidos';
-          if (!inputNombre.value) {
+          if (clientePrevio && inputNombre.value.trim() === clientePrevio.nombre_completo) {
+            inputNombre.value = '';
+          }
+          if (!inputNombre.value && document.activeElement === inputTelefono) {
             inputNombre.focus();
           }
         }
@@ -492,6 +524,21 @@ export class AgendaApp {
       scrollToAgendaTop('agenda-flow-container');
     } catch (err) {
       console.error('[AgendaApp] Error al agendar cita:', err);
+
+      // Si el horario fue ocupado por otro usuario (HTTP 409), refrescar calendario en segundo plano
+      if (err.status === 409 && state.servicioSeleccionado) {
+        this.api
+          .obtenerCalendario(state.servicioSeleccionado.id, 12)
+          .then((calendarioActualizado) => {
+            this.store.setCalendario(calendarioActualizado);
+            const diaActualizado = (calendarioActualizado || []).find(
+              (d) => d.fecha === state.fechaSeleccionada
+            );
+            this.store.setHorasDisponibles(diaActualizado?.slots || []);
+          })
+          .catch(() => {});
+      }
+
       if (errorBox) {
         errorBox.innerHTML = `<i class="fas fa-exclamation-triangle" aria-hidden="true"></i> ${escapeHtml(err.message || 'Ocurrió un error al registrar la cita.')}`;
         errorBox.style.display = 'block';
@@ -532,11 +579,23 @@ export class AgendaApp {
 
 /**
  * Inicialización controlada de la aplicación y controladores globales de navegación.
+ * Dispara la descarga de servicios inmediatamente al evaluar el módulo para ganar tiempo en servidores lentos.
  */
+const earlyApiBase = typeof window !== 'undefined' ? getApiBase() : '/api';
+const earlyServiciosPromise =
+  typeof window !== 'undefined' && typeof fetch !== 'undefined'
+    ? new AgendaApi(earlyApiBase).obtenerServicios()
+    : null;
+
+// Evitar unhandledrejection si la promesa falla antes de que el DOM termine de cargar
+if (earlyServiciosPromise) {
+  earlyServiciosPromise.catch(() => {});
+}
+
 function bootAgendaApp() {
   initNavbarScroll('.navbar');
   initAgendaAnchorLinks();
-  new AgendaApp('agenda-flow-container');
+  new AgendaApp('agenda-flow-container', earlyApiBase, earlyServiciosPromise);
 }
 
 if (typeof document !== 'undefined') {

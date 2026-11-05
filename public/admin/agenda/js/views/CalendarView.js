@@ -9,7 +9,7 @@
  * @module views/CalendarView
  */
 
-import ApiService from '../services/api.js';
+import ApiService from '../services/api.js?v=20261021-e8ee3f';
 import {
   iconCircle,
   iconCircleHalf,
@@ -18,7 +18,7 @@ import {
   iconExclamationTriangleFill,
   iconXCircleFill,
   iconPlusCircleFill
-} from '../icons.js';
+} from '../icons.js?v=20261022-2be38e';
 
 /**
  * Mapa de clases CSS según nivel de ocupación para diferenciación visual accesible.

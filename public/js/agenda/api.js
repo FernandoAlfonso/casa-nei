@@ -101,6 +101,7 @@ export class AgendaApi {
     const url = `${this.baseUrl}${endpoint}`;
     try {
       const response = await fetch(url, {
+        cache: 'no-store',
         headers: {
           'Accept': 'application/json',
           ...(options.headers || {})

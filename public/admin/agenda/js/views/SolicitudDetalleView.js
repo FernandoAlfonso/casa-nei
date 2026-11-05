@@ -17,8 +17,8 @@
  * @module views/SolicitudDetalleView
  */
 
-import ApiService from '../services/api.js';
-import Modal from '../services/modal.js';
+import ApiService from '../services/api.js?v=20261021-e8ee3f';
+import Modal from '../services/modal.js?v=20261105-465a93';
 import {
   iconCheckCircleFill,
   iconXCircleFill,
@@ -28,7 +28,7 @@ import {
   iconExclamationTriangleFill,
   iconCalendar3,
   iconClockFill
-} from '../icons.js';
+} from '../icons.js?v=20261022-2be38e';
 
 /**
  * Escapa caracteres HTML para prevenir inyecciones XSS.

@@ -3,8 +3,8 @@
  * @module components/hoursView
  */
 
-import { escapeHtml } from '../utils/sanitizer.js';
-import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
+import { escapeHtml } from '../utils/sanitizer.js?v=20261105-598836';
+import { formatDateLegible, formatTimeAmPm } from '../utils/date.js?v=20260911-68589e';
 
 /**
  * Renderiza la vista de selección de horarios para una fecha y servicio seleccionados.
@@ -13,9 +13,10 @@ import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
  * @param {import('../api.js').SlotHora[]} horas - Horarios disponibles.
  * @param {import('../api.js').SlotHora|null} horaSeleccionada - Horario actualmente seleccionado.
  * @param {boolean} [loading=false] - Indica si los horarios se están consultando.
+ * @param {string|null} [error=null] - Mensaje de error de red si ocurrió alguno.
  * @returns {string} Markup HTML accesible.
  */
-export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loading = false) {
+export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loading = false, error = null) {
   const fechaTexto = formatDateLegible(fecha);
 
   let html = `
@@ -43,6 +44,22 @@ export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loadin
       <div class="agenda-loading" role="status" aria-live="polite">
         <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
         Consultando horarios libres para el ${fechaTexto}...
+      </div>
+    `;
+  } else if (error) {
+    html += `
+      <div class="agenda-alert error" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        ${escapeHtml(error)}
+        <br><br>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button class="btn-secondary" id="btn-reintentar-horas" type="button">
+            <i class="fas fa-redo" aria-hidden="true"></i> Reintentar
+          </button>
+          <button class="btn-secondary" id="btn-elegir-otro-dia" type="button">
+            <i class="fas fa-calendar-day" aria-hidden="true"></i> Elegir otro día
+          </button>
+        </div>
       </div>
     `;
   } else if (!horas || horas.length === 0) {
@@ -97,10 +114,11 @@ export function renderHoursView(servicio, fecha, horas, horaSeleccionada, loadin
  * Asocia los escuchadores de eventos para la selección de horarios.
  * @param {HTMLElement} container - Contenedor raíz.
  * @param {import('../api.js').SlotHora[]} horas - Horarios disponibles.
- * @param {function(import('../api.js').SlotHora): void} onSelectHora - Callback al seleccionar hora.
+ * @param {function(import('../api.js?v=20261105-cfb423').SlotHora): void} onSelectHora - Callback al seleccionar hora.
  * @param {function(): void} onChangeDia - Callback al pulsar "Cambiar día".
+ * @param {function(): void} [onRetryHoras] - Callback al pulsar "Reintentar" si hubo error de red.
  */
-export function attachHoursListeners(container, horas, onSelectHora, onChangeDia) {
+export function attachHoursListeners(container, horas, onSelectHora, onChangeDia, onRetryHoras) {
   const changeBtn = container.querySelector('#btn-cambiar-dia');
   if (changeBtn && typeof onChangeDia === 'function') {
     changeBtn.addEventListener('click', onChangeDia);
@@ -109,6 +127,11 @@ export function attachHoursListeners(container, horas, onSelectHora, onChangeDia
   const chooseAnotherBtn = container.querySelector('#btn-elegir-otro-dia');
   if (chooseAnotherBtn && typeof onChangeDia === 'function') {
     chooseAnotherBtn.addEventListener('click', onChangeDia);
+  }
+
+  const retryBtn = container.querySelector('#btn-reintentar-horas');
+  if (retryBtn && typeof onRetryHoras === 'function') {
+    retryBtn.addEventListener('click', onRetryHoras);
   }
 
   const slotButtons = container.querySelectorAll('.btn-slot-hora');

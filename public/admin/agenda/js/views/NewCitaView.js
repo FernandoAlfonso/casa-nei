@@ -9,8 +9,8 @@
  * @module views/NewCitaView
  */
 
-import ApiService from '../services/api.js';
-import { iconCheckCircleFill, iconArrowLeft } from '../icons.js';
+import ApiService from '../services/api.js?v=20261021-e8ee3f';
+import { iconCheckCircleFill, iconArrowLeft } from '../icons.js?v=20261022-2be38e';
 
 /**
  * Vista para agendar una nueva cita directamente desde el panel de administración.

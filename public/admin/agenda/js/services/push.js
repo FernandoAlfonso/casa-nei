@@ -1,4 +1,4 @@
-import ApiService from './api.js';
+import ApiService from './api.js?v=20261021-e8ee3f';
 
 export default class PushService {
   /**

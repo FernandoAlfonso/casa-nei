@@ -10,15 +10,15 @@
  * @module views/config/BloqueosView
  */
 
-import ApiService from '../../services/api.js';
-import Modal from '../../services/modal.js';
+import ApiService from '../../services/api.js?v=20261021-e8ee3f';
+import Modal from '../../services/modal.js?v=20261105-465a93';
 import {
   iconLockFill,
   iconTrashFill,
   iconPlusCircleFill,
   iconArrowLeft,
   iconFloppyFill
-} from '../../icons.js';
+} from '../../icons.js?v=20261022-2be38e';
 
 /**
  * Vista de administración de bloqueos de agenda (festivos, ausencias, vacaciones).

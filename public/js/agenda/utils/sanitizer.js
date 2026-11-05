@@ -21,13 +21,22 @@ export function escapeHtml(str) {
 }
 
 /**
- * Normaliza un número de teléfono extrayendo exclusivamente los dígitos numéricos.
+ * Normaliza un número de teléfono extrayendo exclusivamente los dígitos numéricos
+ * y removiendo prefijos internacionales mexicanos (+52 / 521) cuando vienen de
+ * autocompletado nativo en iOS/Android o copiado desde WhatsApp/Contactos.
  * @param {string} phone - Número de teléfono en cualquier formato.
- * @returns {string} Dígitos numéricos limpios.
+ * @returns {string} Dígitos numéricos limpios (10 dígitos para números mexicanos con lada +52).
  */
 export function sanitizePhone(phone) {
   if (!phone) return '';
-  return String(phone).replace(/\D/g, '');
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length === 13 && digits.startsWith('521')) {
+    return digits.slice(3);
+  }
+  if (digits.length === 12 && digits.startsWith('52')) {
+    return digits.slice(2);
+  }
+  return digits;
 }
 
 /**

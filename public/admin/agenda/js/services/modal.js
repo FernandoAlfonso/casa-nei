@@ -20,7 +20,7 @@ import {
   iconTrashFill,
   iconArrowLeft,
   iconFloppyFill
-} from '../icons.js';
+} from '../icons.js?v=20261022-2be38e';
 
 /**
  * Servicio estático para mostrar diálogos modales no bloqueantes.

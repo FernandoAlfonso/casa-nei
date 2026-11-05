@@ -10,20 +10,21 @@ export class SanitizerTest extends TestCase {
   testSanitizePhone() {
     const rawPhone = '+52 (312) 106-4455';
     const clean = sanitizePhone(rawPhone);
-    this.assertEquals('523121064455', clean, 'Debe remover todos los caracteres no numéricos.');
+    this.assertEquals('3121064455', clean, 'Debe remover caracteres no numéricos y normalizar prefijo mexicano +52 a 10 dígitos.');
+
+    const rawPhone521 = '+52 1 (312) 106-4455';
+    this.assertEquals('3121064455', sanitizePhone(rawPhone521), 'Debe normalizar prefijo móvil +52 1 a 10 dígitos.');
   }
 
   testIsValidMexicanPhone() {
     this.assertTrue(isValidMexicanPhone('3121064455'), 'Un número de 10 dígitos debe ser válido.');
     this.assertFalse(isValidMexicanPhone('12345'), 'Un número de menos dígitos debe ser inválido.');
-    this.assertFalse(isValidMexicanPhone('+52 (312) 106 4455'), 'Un número formateado que contiene 10 dígitos principales no será válido si incluye el +52. Según sanitizePhone queda de 12.');
-    // Nota: Si sanitizePhone deja "523121064455", entonces isValidMexicanPhone('+52 (312) 106 4455') dará FALSO porque exige exactamente 10 dígitos.
+    this.assertTrue(isValidMexicanPhone('+52 (312) 106 4455'), 'Un número mexicano autocompletado con +52 debe normalizarse a 10 dígitos y ser válido.');
   }
 
   testIsValidMexicanPhoneWithCode() {
-    // La función original espera exactamente 10 dígitos al limpiar.
-    // +52... resultaría en 12 dígitos.
-    this.assertFalse(isValidMexicanPhone('+52 (312) 106-4455'), 'Debería ser falso porque con el código de país son 12 dígitos y la regex pide 10.');
+    this.assertTrue(isValidMexicanPhone('+52 1 (312) 106-4455'), 'Un número con +52 1 de 13 dígitos debe normalizarse a 10 dígitos y ser válido.');
+    this.assertFalse(isValidMexicanPhone('+1 (415) 555-267189'), 'Un número internacional no mexicano de 11+ dígitos no debe ser válido como celular nacional de 10 dígitos.');
   }
 
   testEscapeHtml() {

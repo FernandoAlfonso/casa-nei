@@ -3,8 +3,8 @@
  * @module components/calendarView
  */
 
-import { escapeHtml } from '../utils/sanitizer.js';
-import { parseLocalDate, getDayShortName, getMonthShortName, formatDateAccessible } from '../utils/date.js';
+import { escapeHtml } from '../utils/sanitizer.js?v=20261105-598836';
+import { parseLocalDate, getDayShortName, getMonthShortName, formatDateAccessible } from '../utils/date.js?v=20260911-68589e';
 
 /**
  * Renderiza la vista del calendario con días disponibles garantizados.
@@ -12,9 +12,10 @@ import { parseLocalDate, getDayShortName, getMonthShortName, formatDateAccessibl
  * @param {import('../api.js').DiaCalendario[]} calendario - Lista de días y su disponibilidad.
  * @param {string|null} fechaSeleccionada - Fecha seleccionada en formato YYYY-MM-DD.
  * @param {boolean} [cargandoMasDias=false] - Indica si se están cargando días adicionales.
+ * @param {string|null} [error=null] - Mensaje de error de red si ocurrió alguno.
  * @returns {string} Markup HTML accesible.
  */
-export function renderCalendarView(servicio, calendario, fechaSeleccionada, cargandoMasDias = false) {
+export function renderCalendarView(servicio, calendario, fechaSeleccionada, cargandoMasDias = false, error = null) {
   // Filtrar estrictamente solo días que tengan estado disponible y slots libres
   const diasDisponibles = (calendario || []).filter(
     (dia) => dia.estado === 'disponible' && dia.slots_libres > 0
@@ -45,6 +46,21 @@ export function renderCalendarView(servicio, calendario, fechaSeleccionada, carg
         <span><strong>Nota:</strong> Solo se muestran los días con horarios disponibles. Los días cerrados o sin disponibilidad no aparecen en la lista.</span>
       </div>
   `;
+
+  if (error && diasDisponibles.length === 0) {
+    html += `
+      <div class="agenda-alert error" role="alert" style="margin: 1.5rem 0;">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <span>${escapeHtml(error)}</span>
+        <br><br>
+        <button class="btn-secondary" id="btn-reintentar-calendario" type="button">
+          <i class="fas fa-redo" aria-hidden="true"></i> Reintentar
+        </button>
+      </div>
+    </div>
+    `;
+    return html;
+  }
 
   if (diasDisponibles.length === 0 && !cargandoMasDias) {
     html += `
@@ -98,6 +114,15 @@ export function renderCalendarView(servicio, calendario, fechaSeleccionada, carg
     `;
   }
 
+  if (error && diasDisponibles.length > 0) {
+    html += `
+      <div class="agenda-alert error" role="alert" style="margin: 1rem 0;">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <span>${escapeHtml(error)}</span>
+      </div>
+    `;
+  }
+
   // Botón sin límite para seguir consultando días posteriores
   html += `
       <div class="agenda-more-days-container">
@@ -123,11 +148,17 @@ export function renderCalendarView(servicio, calendario, fechaSeleccionada, carg
  * @param {function(string): void} onSelectFecha - Callback al seleccionar una fecha (formato YYYY-MM-DD).
  * @param {function(): void} onChangeServicio - Callback al pulsar "Cambiar servicio".
  * @param {function(): void} [onCargarMasDias] - Callback al pulsar "Ver siguientes días disponibles".
+ * @param {function(): void} [onRetryCalendario] - Callback al pulsar "Reintentar" cuando falla la carga inicial.
  */
-export function attachCalendarListeners(container, onSelectFecha, onChangeServicio, onCargarMasDias) {
+export function attachCalendarListeners(container, onSelectFecha, onChangeServicio, onCargarMasDias, onRetryCalendario) {
   const changeBtn = container.querySelector('#btn-cambiar-servicio');
   if (changeBtn && typeof onChangeServicio === 'function') {
     changeBtn.addEventListener('click', onChangeServicio);
+  }
+
+  const retryBtn = container.querySelector('#btn-reintentar-calendario');
+  if (retryBtn && typeof onRetryCalendario === 'function') {
+    retryBtn.addEventListener('click', onRetryCalendario);
   }
 
   const moreDaysBtn = container.querySelector('#btn-cargar-siguientes-dias');

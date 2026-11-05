@@ -12,15 +12,15 @@
  * @module views/config/ServicesView
  */
 
-import ApiService from '../../services/api.js';
-import Modal from '../../services/modal.js';
+import ApiService from '../../services/api.js?v=20261021-e8ee3f';
+import Modal from '../../services/modal.js?v=20261105-465a93';
 import {
   iconPlusCircleFill,
   iconPencilFill,
   iconFloppyFill,
   iconArrowLeft,
   iconStarFill
-} from '../../icons.js';
+} from '../../icons.js?v=20261022-2be38e';
 
 /**
  * Genera el badge HTML para mostrar en la tarjeta si tiene horario personalizado o general.

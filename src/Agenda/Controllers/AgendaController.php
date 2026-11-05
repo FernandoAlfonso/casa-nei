@@ -229,8 +229,8 @@ class AgendaController
         $errores[] = "El nombre completo es obligatorio.";
       }
 
-      // El celular con WhatsApp es estrictamente obligatorio (10 dígitos numéricos)
-      $telefonoLimpio = $telefono !== null ? preg_replace('/[^0-9]/', '', $telefono) : '';
+      // El celular con WhatsApp es estrictamente obligatorio (10 dígitos numéricos tras normalizar prefijo +52 / 521)
+      $telefonoLimpio = $telefono !== null ? \App\Shared\Security\Encryption::normalizePhone($telefono) : '';
       if (empty($telefonoLimpio) || strlen($telefonoLimpio) !== 10) {
         $errores[] = "El número celular con WhatsApp es obligatorio y debe contener 10 dígitos.";
       }

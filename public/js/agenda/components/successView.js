@@ -3,8 +3,8 @@
  * @module components/successView
  */
 
-import { escapeHtml, isSafeWhatsAppUrl } from '../utils/sanitizer.js';
-import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
+import { escapeHtml, isSafeWhatsAppUrl } from '../utils/sanitizer.js?v=20261105-598836';
+import { formatDateLegible, formatTimeAmPm } from '../utils/date.js?v=20260911-68589e';
 
 /**
  * Renderiza la pantalla de confirmación exitosa con enlace directo a WhatsApp.

@@ -9,7 +9,7 @@
  * @module views/SettingsView
  */
 
-import Modal from '../services/modal.js';
+import Modal from '../services/modal.js?v=20261105-465a93';
 import {
   iconBellFill,
   iconStarFill,
@@ -19,7 +19,7 @@ import {
   iconCheckCircleFill,
   iconXCircleFill,
   iconBoxArrowRight
-} from '../icons.js';
+} from '../icons.js?v=20261022-2be38e';
 
 /**
  * Vista de ajustes del panel de administración.
@@ -123,7 +123,7 @@ export default class SettingsView {
       btnPush.addEventListener('click', async () => {
         pushStatusText.textContent = 'Configurando...';
         
-        import('../services/push.js').then(async (module) => {
+        import('../services/push.js?v=20261105-5d7596').then(async (module) => {
           const PushService = module.default;
           const success = await PushService.subscribeDevice();
           if (success) {

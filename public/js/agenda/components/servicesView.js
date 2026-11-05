@@ -3,7 +3,7 @@
  * @module components/servicesView
  */
 
-import { escapeHtml } from '../utils/sanitizer.js';
+import { escapeHtml } from '../utils/sanitizer.js?v=20261105-598836';
 
 /**
  * Renderiza la vista de selección de servicios.
@@ -72,7 +72,7 @@ export function renderServicesView(servicios, servicioSeleccionado) {
  * Asocia los escuchadores de eventos para la selección de servicio.
  * @param {HTMLElement} container - Contenedor raíz.
  * @param {import('../api.js').Servicio[]} servicios - Catálogo de servicios.
- * @param {function(import('../api.js').Servicio): void} onSelectServicio - Callback al seleccionar.
+ * @param {function(import('../api.js?v=20261105-cfb423').Servicio): void} onSelectServicio - Callback al seleccionar.
  */
 export function attachServicesListeners(container, servicios, onSelectServicio) {
   const cards = container.querySelectorAll('.agenda-service-card');

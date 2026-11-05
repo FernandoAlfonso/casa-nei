@@ -117,15 +117,7 @@ class HorarioRepository
       }
     }
 
-    if (!empty($resultados)) {
-      return $resultados;
-    }
-
-    $sql = "SELECT id, dia_semana, hora_inicio, hora_fin, activo 
-            FROM horarios_atencion 
-            WHERE dia_semana = ? AND activo = 1";
-
-    return $this->db->fetchAll($sql, [$diaSemana], fn(array $row) => HorarioAtencion::fromArray($row));
+    return $resultados;
   }
 
   /**

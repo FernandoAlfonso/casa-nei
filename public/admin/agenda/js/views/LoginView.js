@@ -8,9 +8,9 @@
  * @module views/LoginView
  */
 
-import ApiService from '../services/api.js';
-import PushService from '../services/push.js';
-import { iconLockFill } from '../icons.js';
+import ApiService from '../services/api.js?v=20261021-e8ee3f';
+import PushService from '../services/push.js?v=20261105-5d7596';
+import { iconLockFill } from '../icons.js?v=20261022-2be38e';
 
 /**
  * Vista de inicio de sesión administrativo.

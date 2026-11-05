@@ -3,18 +3,9 @@
  * @module components/formView
  */
 
-import { escapeHtml, sanitizePhone, isValidMexicanPhone } from '../utils/sanitizer.js';
-import { formatDateLegible, formatTimeAmPm } from '../utils/date.js';
+import { escapeHtml, sanitizePhone, isValidMexicanPhone } from '../utils/sanitizer.js?v=20261105-598836';
+import { formatDateLegible, formatTimeAmPm } from '../utils/date.js?v=20260911-68589e';
 
-/**
- * Renderiza el formulario y resumen de la cita.
- * @param {import('../api.js').Servicio} servicio - Servicio seleccionado.
- * @param {string} fecha - Fecha seleccionada (YYYY-MM-DD).
- * @param {import('../api.js').SlotHora} hora - Horario seleccionado.
- * @param {import('../api.js').Cliente|null} [cliente=null] - Cliente reconocido previamente.
- * @param {boolean} [submitting=false] - Indica si el formulario se está enviando.
- * @returns {string} Markup HTML accesible.
- */
 /**
  * Renderiza el formulario y resumen de la cita.
  * @param {import('../api.js').Servicio} servicio - Servicio seleccionado.
@@ -102,7 +93,9 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
                        name="telefono" 
                        value="${clienteTelefono}"
                        placeholder="Ej. 312 123 4567 (10 dígitos)" 
-                       maxlength="15" 
+                       maxlength="20" 
+                       inputmode="numeric"
+                       enterkeyhint="next"
                        required 
                        autocomplete="tel"
                        aria-describedby="telefono-hint">
@@ -142,6 +135,8 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
                        name="nombre" 
                        value="${clienteNombre}"
                        placeholder="Nombre y Apellidos" 
+                       autocapitalize="words"
+                       enterkeyhint="next"
                        required 
                        autocomplete="name">
                 <span id="nombre-spinner" class="input-inline-spinner" style="display: none;" aria-hidden="true">
@@ -158,6 +153,7 @@ export function renderFormView(servicio, fecha, hora, cliente = null, submitting
               <textarea id="paciente_notas" 
                         name="notas" 
                         rows="3" 
+                        enterkeyhint="done"
                         placeholder="Describe brevemente tus dudas o molestias para prepararnos mejor..."></textarea>
             </div>
 
@@ -212,7 +208,14 @@ export function attachFormListeners(container, onPhoneLookup, onSubmit, onChange
   if (inputTelefono) {
     inputTelefono.addEventListener('input', (e) => {
       clearTimeout(debounceTimer);
-      const digits = sanitizePhone(e.target.value);
+      const rawVal = e.target.value;
+      const digits = sanitizePhone(rawVal);
+
+      // Si el usuario usó autocompletado de iOS/Android con +52 (12 o 13 dígitos originales),
+      // reflejar el número nacional limpio de 10 dígitos en el campo
+      if (digits.length === 10 && rawVal.replace(/\D/g, '').length > 10) {
+        e.target.value = digits;
+      }
 
       if (digits.length === 10) {
         if (digits !== ultimoTelefonoBuscado) {

@@ -7,24 +7,31 @@
     <title>Casa Nei | Medicina Tradicional China y Artes Marciales</title>
     <meta name="description"
         content="Centro multidisciplinario dedicado a brindar atención integral a tus necesidades físicas y emocionales.">
+    <meta name="theme-color" content="#557b5f">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260924-009a7f">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+    <link rel="stylesheet" href="style.css?v=20261105-3bb176">
+    <link rel="modulepreload" href="js/agenda/main.js?v=20261105-133777">
+    <link rel="modulepreload" href="js/agenda/api.js?v=20261105-cfb423">
+    <link rel="modulepreload" href="js/agenda/store.js?v=20261105-d2a017">
+    <link rel="modulepreload" href="js/agenda/components/stepsBar.js?v=20260903-6fc36d">
+    <link rel="modulepreload" href="js/agenda/components/servicesView.js?v=20261105-f9738f">
     <!-- Favicon -->
-    <link rel="icon" type="image/jpeg" href="/logo.jpg">
-    <link rel="apple-touch-icon" href="/logo.jpg">
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <link rel="apple-touch-icon" href="logo.jpg">
 
     <!-- Open Graph (WhatsApp, Facebook, LinkedIn) -->
     <meta property="og:title" content="Casa Nei | Medicina Tradicional China y Artes Marciales">
     <meta property="og:description"
         content="Centro multidisciplinario dedicado a brindar atención integral a tus necesidades físicas y emocionales.">
-    <!-- IMPORTANTE: Reemplaza "tudominio.com" con tu dominio real cuando la página esté en línea -->
     <meta property="og:image" content="https://ola-verde-colima.xyz/casa-nei/logo.jpg">
-    <meta property="og:url" content="https://ola-verde-colima.xyz">
+    <meta property="og:url" content="https://ola-verde-colima.xyz/casa-nei/">
     <meta property="og:type" content="website">
 
     <!-- Twitter -->
@@ -40,7 +47,7 @@
     <!-- Navbar -->
     <nav class="navbar">
         <a href="#inicio" class="logo">
-            <img src="logo.jpg" alt="Casa Nei Logo" style="height: 60px; border-radius: 12px;">
+            <img src="logo.jpg" alt="Casa Nei Logo" width="60" height="60" fetchpriority="high" style="height: 60px; width: auto; border-radius: 12px;">
             <span style="display: none;">Casa Nei</span>
         </a>
         <ul class="nav-links">
@@ -54,6 +61,7 @@
         <a href="#agenda" class="btn-primary">Agenda una cita</a>
     </nav>
 
+    <main>
     <!-- Hero Section (Inicio) -->
     <section id="inicio" class="hero">
         <div class="hero-content">
@@ -137,7 +145,7 @@
         <div class="about-grid">
             <div class="about-img-container">
                 <!-- Placeholder for portrait -->
-                <img src="renato.jpg" alt="Terapeuta" class="about-img">
+                <img src="renato.jpg" alt="Terapeuta" class="about-img" width="600" height="600" loading="lazy" decoding="async">
             </div>
             <div class="about-text">
                 <h3>Integrando la mente, el cuerpo y la energía</h3>
@@ -184,16 +192,22 @@
         </div>
     </section>
 
-    <!-- Agenda (Call to Action) -->
-    <section id="agenda" style="background-color: var(--bg-color); text-align: center;">
-        <h2 class="section-title">Comienza tu viaje</h2>
-        <p style="color: var(--text-muted); font-size: 1.2rem; max-width: 600px; margin: 0 auto 2rem;">Estamos listos
-            para recibirte. Agenda tu cita de valoración o solicita información sobre nuestras clases y talleres.</p>
-        <a href="https://wa.me/523121064455?text=Hola,%20quisiera%20agendar%20una%20cita" target="_blank"
-            class="btn-primary" style="display: inline-block; padding: 1rem 2rem; font-size: 1.1rem;">
-            <i class="fab fa-whatsapp"></i> Agendar por WhatsApp
-        </a>
+    <!-- Agenda Section Dinámica -->
+    <section id="agenda" class="agenda-section">
+        <div class="agenda-wrapper">
+            <h2 class="section-title">Agenda tu Cita</h2>
+            <p class="agenda-intro-text">
+                Elige tu servicio, consulta los días y horarios libres en tiempo real y confirma tu espacio
+                fácilmente vía WhatsApp.
+            </p>
+
+            <!-- Contenedor dinámico controlado por main.js -->
+            <div id="agenda-flow-container" class="agenda-container-card">
+                <!-- Se renderiza dinámicamente según el paso -->
+            </div>
+        </div>
     </section>
+    </main>
 
     <!-- Footer / Contacto -->
     <footer id="contacto" class="footer">
@@ -230,7 +244,7 @@
     </footer>
 
     <!-- Script de Navegación y Agenda -->
-    <script type="module" src="js/agenda/main.js?v=20260924-0c0034"></script>
+    <script type="module" src="js/agenda/main.js?v=20261105-133777"></script>
 </body>
 
 </html>
